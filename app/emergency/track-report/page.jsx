@@ -11,39 +11,24 @@ import Link from "next/link"
 import { mockReports, statusConfig, severityConfig, disasterTypes } from "@/lib/disaster-data"
 import { BackButton } from "@/components/ui/back-button"
 import { useRouter } from "next/navigation"
+import useTrackReport from "@/hooks/use-track-report";
 
 export default function TrackReportPage() {
-  const [reportId, setReportId] = useState("")
-  const [searchResult, setSearchResult] = useState(null)
-  const [isSearching, setIsSearching] = useState(false)
-  const [error, setError] = useState("")
-  const router = useRouter()
+  const [inputId, setInputId] = useState("");
+  const [reportId, setReportId] = useState("");
+  const [error, setError] = useState("");
+  const router = useRouter();
 
-  const handleSearch = async () => {
-    if (!reportId.trim()) {
-      setError("Please enter a report ID")
-      return
+  const { data: searchResult, isLoading, isError } = useTrackReport(reportId);
+
+  const handleSearch = () => {
+    if (!inputId.trim()) {
+      setError("Please enter a report ID");
+      return;
     }
-
-    setIsSearching(true)
-    setError("")
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    // Search in mock data
-    const report = mockReports.find((r) => r.id.toLowerCase() === reportId.toLowerCase())
-
-    if (report) {
-      setSearchResult(report)
-      setError("")
-    } else {
-      setSearchResult(null)
-      setError("Report not found. Please check the ID and try again.")
-    }
-
-    setIsSearching(false)
-  }
+    setError("");
+    setReportId(inputId.trim());
+  };
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -113,14 +98,14 @@ export default function TrackReportPage() {
                 </Label>
                 <Input
                   id="reportId"
-                  value={reportId}
-                  onChange={(e) => setReportId(e.target.value)}
+                  value={inputId}
+                  onChange={(e) => setInputId(e.target.value)}
                   placeholder="DZ-20240621-ABC123"
                   className="font-mono"
                 />
               </div>
-              <Button onClick={handleSearch} disabled={isSearching} className="bg-red-600 hover:bg-red-700">
-                {isSearching ? (
+              <Button onClick={handleSearch} disabled={isLoading} className="bg-red-600 hover:bg-red-700">
+                {isLoading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 ) : (
                   <Search className="h-4 w-4" />
@@ -132,6 +117,19 @@ export default function TrackReportPage() {
         </Card>
 
         {/* Search Result */}
+        {isLoading && reportId && (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+            <span className="ml-2 text-gray-600">Searching...</span>
+          </div>
+        )}
+        {isError && reportId && (
+          <div className="text-center py-8">
+            <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Report Not Found</h3>
+            <p className="text-gray-600 mb-4">No report found with that ID. Please check and try again.</p>
+          </div>
+        )}
         {searchResult && (
           <div className="mt-6 space-y-6">
             {/* Status Overview */}

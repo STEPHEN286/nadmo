@@ -45,14 +45,14 @@ export default function ProfilePage() {
   // Use the hook to fetch user reports
   const { data: reports = [], isLoading: reportsLoading, error: reportsError } = useUserReports(user?.id)
 
-  console.log("ProfilePage: Component rendered, user:", user, "mounted:", mounted)
+  // console.log("ProfilePage: Component rendered, user:", user, "mounted:", mounted)
 
   // Redirect if not authenticated (only after auth hook has mounted)
   useEffect(() => {
-    console.log("ProfilePage: useEffect triggered, user:", user, "mounted:", mounted)
+    // console.log("ProfilePage: useEffect triggered, user:", user, "mounted:", mounted)
     if (mounted && !user) {
-      console.log("ProfilePage: No user found after mount, redirecting to login")
-      router.push("/emergency/auth/login")
+      // console.log("ProfilePage: No user found after mount, redirecting to login")
+      router.push("/emergency/")
     } else if (mounted && user) {
       console.log("ProfilePage: User found, staying on profile page")
     }

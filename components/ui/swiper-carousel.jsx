@@ -63,7 +63,7 @@ const SwiperCarousel = ({
         autoplay={autoplay ? { delay: autoplayDelay, disableOnInteraction: false } : false}
         // navigation={showNavigation && slides.length > 1}
         // pagination={showPagination && slides.length > 1 ? { clickable: true } : false}
-        className="w-full"
+        className="w-full h-full"
       
       >
         {slides.map((slide, index) => (

@@ -51,21 +51,22 @@ export default function EmergencyPage() {
   return (
     <EmergencyLayout>
       {/* Hero Section */}
-      <div className="h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] relative">
+      <div className="h-[300px]  sm:h-[400px] md:h-[500px] lg:h-[600px] relative">
+        <div className="absolute inset-0 bg-red-600/30 z-10"></div>
         <SwiperCarousel
           slides={heroSlides}
           variant="hero"
           autoplay={true}
           autoplayDelay={5000}
           effect="fade"
-          className="absolute inset-0 w-full h-full"
-          imageClassName="object-cover w-full h-full"
+          className="absolute inset-0 "
+      
         />
         
         {/* Dark overlay for text readability */}
-        <div className="absolute inset-0 bg-red-600/30 z-10"></div>
+      
 
-        <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center text-center text-white">
+        <div className="relative z-20     mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center text-center text-white">
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-2 sm:mb-4 leading-tight">Emergency Response</h1>
           <p className="text-base sm:text-lg md:text-xl lg:text-2xl mb-4 sm:mb-8 max-w-4xl mx-auto leading-relaxed opacity-90">
             Report disasters and emergencies directly to Ghana's National Disaster Management Organisation (NADMO)
@@ -93,8 +94,8 @@ export default function EmergencyPage() {
       </div>
 
       {/* Main Action Cards Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-12 sm:mb-16 lg:mb-20  p-4 sm:p-6 mt-8 sm:-mt-20 lg:-mt-32 sm:relative sm:z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ">
+        <div className="grid grid-cols-1  lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-12 sm:mb-16 lg:mb-20  p-4 sm:p-6 mt-8 sm:-mt-20 lg:-mt-32 sm:relative sm:z-10">
           <Link href="emergency/report-disaster">
             <Card className="group hover:shadow-xl transition-all duration-300 cursor-pointer bg-white">
               <CardContent className="p-4 sm:p-6 lg:p-8 text-center">

@@ -111,7 +111,7 @@ export default function ReportDisasterPage() {
       severity_level: data.severity_level,
       are_people_hurt: data.number_injured > 0,
       status: "pending",
-      reporter: user?.id,
+      reporter: user? user?.id : null,
       // photo: data.photo,
     };
 
@@ -388,7 +388,7 @@ export default function ReportDisasterPage() {
                 <div className="flex justify-end">
                   <Button
                     type="submit"
-                    disabled={isLoading || !user}
+                    disabled={isLoading }
                     className="bg-red-600 hover:bg-red-700"
                   >
                     {isLoading ? (

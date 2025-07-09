@@ -1,13 +1,32 @@
 "use client"
 
-// import { Header } from "@/components/layout/header"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { NadmoSidebar } from "./nadmo-sidebar"
 import { Header } from "./header"
+import { useAuth } from "@/hooks/use-auth"
 
 export function NadmoLayout({ children }) {
-  // if (!user) {
-  //   return null
-  // }
+  const { user, mounted } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (mounted && !user) {
+      router.push("/login");
+    }
+  }, [user, mounted, router]);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

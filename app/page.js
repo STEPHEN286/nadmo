@@ -1,31 +1,34 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/use-auth"
+import { useReporterAuth } from "@/hooks/use-reporter-auth"
 
 export default function HomePage() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(true)
-  const [user, setUser] = useState(null)
+  const { user: nadmoUser, mounted: nadmoMounted } = useAuth()
+  const { mounted: reporterMounted } = useReporterAuth()
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("unified_app_user")
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
-      router.push("/edu-track/dashboard")
-    } else {
-      setIsLoading(false)
-      router.push("/login")
+    if (!nadmoMounted || !reporterMounted) return
+
+    // Admin/staff: dashboard
+    if (nadmoUser && (nadmoUser.role === "admin" || nadmoUser.is_staff)) {
+      router.push("/dashboard")
+      return
     }
-  }, [router])
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600"></div>
+    
+    router.push("/emergency")
+  }, [nadmoUser, nadmoMounted, reporterMounted, router])
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Redirecting...</p>
       </div>
-    )
-  }
-
-  return null
+    </div>
+  )
 }

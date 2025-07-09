@@ -10,10 +10,15 @@ export function Header({ onLogout }) {
   const router = useRouter();
   const { user, logout } = useAuth();
   
+  console.log("Header user:", user);
+
   const handleLogout = () => {
     logout();
     if (onLogout) onLogout();
   }
+
+  // Make role check case-insensitive
+  const isAdminOrStaff = user && (user.role?.toLowerCase() === "admin" || user.is_staff);
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-3 sm:px-4 lg:px-6 py-3 sticky top-0 z-30 h-[60px]">
@@ -38,7 +43,7 @@ export function Header({ onLogout }) {
                     </Badge>
                   )}
                   <Badge
-                    variant={user?.role === "ADMIN" ? "default" : "secondary"}
+                    variant={user?.role?.toLowerCase() === "admin" ? "default" : "secondary"}
                     className="text-[9px] sm:text-[10px] capitalize px-1 sm:px-1.5 py-0 h-3 sm:h-4"
                   >
                     {user?.role?.replace("_", " ")}
@@ -87,8 +92,8 @@ export function Header({ onLogout }) {
                 <span className="hidden sm:inline">Logout</span>
               </Button>
             </>
-          ) : (
-            // User is not authenticated - show auth buttons
+          ) : !isAdminOrStaff ? (
+            // User is not authenticated and not admin/staff - show auth buttons
             <>
               {/* Login Button */}
               <Button 
@@ -110,7 +115,7 @@ export function Header({ onLogout }) {
                 <span className="hidden sm:inline">Sign Up</span>
               </Button>
             </>
-          )}
+          ) : null}
         </div>
       </div>
     </header>
