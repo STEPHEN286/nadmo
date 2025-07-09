@@ -7,24 +7,21 @@ import { CheckCircle, Clock, Phone, Copy, Search } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { BackButton } from "@/components/ui/back-button"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
 export default function ReportConfirmationPage() {
   const [reportId, setReportId] = useState("")
   const { toast } = useToast()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
-    // Get report ID from localStorage (set during submission)
-    const storedReportId = localStorage.getItem("lastReportId")
-    if (storedReportId) {
-      setReportId(storedReportId)
-    } else {
-      // Generate a fallback ID if none exists
-      const fallbackId = `DZ-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
-      setReportId(fallbackId)
-    }
-  }, [])
+    // Get report ID from URL query parameter
+    const urlReportId = searchParams.get("id")
+    if (urlReportId) {
+      setReportId(urlReportId)
+    } 
+  }, [searchParams])
 
   const copyReportId = () => {
     navigator.clipboard.writeText(reportId)
@@ -107,18 +104,18 @@ export default function ReportConfirmationPage() {
             </div>
 
             <div className="space-y-3">
-              <Link href="/nadmo-emergency/track-report" className="block">
+              <Link href="/emergency/track-report" className="block">
                 <Button className="w-full bg-red-600 hover:bg-red-700">
                   <Search className="h-4 w-4 mr-2" />
                   Track This Report
                 </Button>
               </Link>
-              <Link href="/report-disaster" className="block">
+              <Link href="/emergency/report-disaster" className="block">
                 <Button variant="outline" className="w-full">
                   Report Another Emergency
                 </Button>
               </Link>
-              <Link href="/" className="block">
+              <Link href="/emergency" className="block">
                 <Button variant="ghost" className="w-full">
                   Return to Home
                 </Button>

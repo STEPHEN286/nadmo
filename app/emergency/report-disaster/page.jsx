@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -49,9 +49,9 @@ const reportSchema = z.object({
 
 export default function ReportDisasterPage() {
   // const [isSubmitting, setIsSubmitting] = useState(false)
-  const router = useRouter()
+ const router = useRouter()
   const { toast } = useToast()
-  const { mutate: reportIssue, isLoading } = useReportIssue()
+ 
   const { user } = useReporterAuth();
   const form = useForm({
     resolver: zodResolver(reportSchema),
@@ -67,6 +67,13 @@ export default function ReportDisasterPage() {
   });
   const { handleSubmit, control, register, setValue, watch, formState: { errors } } = form;
   const watchedImages = watch("photo");
+
+  // Add useReportIssue with onSuccess redirect
+  const { mutate: reportIssue, isLoading } = useReportIssue({
+    onSuccess: () => {
+      router.push("/emergency/report-confirmation");
+    },
+  });
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -115,8 +122,7 @@ export default function ReportDisasterPage() {
       // photo: data.photo,
     };
 
-    reportIssue(payload)
-
+    reportIssue(payload);
     
     // console.log("Submitting payload:", payload);
    

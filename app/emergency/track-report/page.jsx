@@ -331,28 +331,7 @@ export default function TrackReportPage() {
           </div>
         )}
 
-        {/* Sample Report IDs for Testing */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Sample Report IDs for Testing</CardTitle>
-            <CardDescription>You can use these sample IDs to test the tracking system</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-              {mockReports.slice(0, 4).map((report) => (
-                <div key={report.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                  <span className="font-mono">{report.id}</span>
-                  <Badge
-                    variant="outline"
-                    className={`${statusConfig[report.status].bgColor} ${statusConfig[report.status].textColor}`}
-                  >
-                    {statusConfig[report.status].label}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      
       </div>
     </div>
   )

@@ -42,7 +42,7 @@ export default function NADMOLoginPage() {
     if (mounted && user) {
       // Redirect based on user role or to profile page
       if (user.role === 'admin' || user.is_staff) {
-        router.push("/nadmo/dashboard");
+        router.push("/dashboard");
       } 
     }
   }, [user, mounted, router]);

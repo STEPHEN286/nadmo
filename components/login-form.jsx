@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Shield, User, Lock, GraduationCap, AlertTriangle } from "lucide-react";
+import { User, Lock, AlertTriangle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -19,7 +19,7 @@ const loginSchema = z.object({
   rememberMe: z.boolean().default(false),
 });
 
-export function LoginForm({ systemType = "EDU_TRACK" }) {
+export function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -37,13 +37,9 @@ export function LoginForm({ systemType = "EDU_TRACK" }) {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      if (systemType === "NADMO") {
-        router.push("/nadmo/dashboard");
-      } else {
-        router.push("/edu-track/dashboard");
-      }
+      router.push("/dashboard");
     }
-  }, [user, router, systemType]);
+  }, [user, router]);
 
   // Show error toast when login fails
   useEffect(() => {
@@ -57,14 +53,14 @@ export function LoginForm({ systemType = "EDU_TRACK" }) {
   }, [isError, error, toast]);
 
   const onSubmit = async (data) => {
-    await login(data.email, data.password, systemType);
+    await login(data.email, data.password, "NADMO");
   };
 
   // Show loading while checking authentication
   if (!mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
       </div>
     );
   }
@@ -73,18 +69,18 @@ export function LoginForm({ systemType = "EDU_TRACK" }) {
   if (user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
         <span className="ml-4 text-gray-600">Redirecting...</span>
       </div>
     );
   }
 
-  const isNADMO = systemType === "NADMO";
-  const buttonColor = isNADMO ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700";
-  const iconColor = isNADMO ? "text-red-600" : "text-green-600";
-  const bgColor = isNADMO ? "bg-red-100" : "bg-green-100";
-  const focusColor = isNADMO ? "focus:border-red-400 focus:ring-red-200" : "focus:border-green-400 focus:ring-green-200";
-  const systemName = isNADMO ? "NADMO Emergency" : "EDU-Track";
+  // NADMO-specific styles
+  const buttonColor = "bg-red-600 hover:bg-red-700";
+  const iconColor = "text-red-600";
+  const bgColor = "bg-red-100";
+  const focusColor = "focus:border-red-400 focus:ring-red-200";
+  const systemName = "NADMO Emergency";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -92,11 +88,7 @@ export function LoginForm({ systemType = "EDU_TRACK" }) {
         <Card className="shadow-lg border-0">
           <CardHeader className="text-center pb-6">
             <div className={`mx-auto w-12 h-12 ${bgColor} rounded-full flex items-center justify-center mb-4`}>
-              {isNADMO ? (
-                <AlertTriangle className={`h-6 w-6 ${iconColor}`} />
-              ) : (
-                <GraduationCap className={`h-6 w-6 ${iconColor}`} />
-              )}
+              <AlertTriangle className={`h-6 w-6 ${iconColor}`} />
             </div>
             <h1 className="text-2xl font-semibold text-gray-900">
               {systemName}
