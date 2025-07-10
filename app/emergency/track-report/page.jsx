@@ -8,10 +8,39 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Search, MapPin, Clock, User, Phone, AlertTriangle, CheckCircle, XCircle, Eye } from "lucide-react"
 import Link from "next/link"
-import { mockReports, statusConfig, severityConfig, disasterTypes } from "@/lib/disaster-data"
+
 import { BackButton } from "@/components/ui/back-button"
 import { useRouter } from "next/navigation"
 import useTrackReport from "@/hooks/use-track-report";
+import { severityConfig, disasterTypes } from "@/lib/disaster-data"
+
+// Local status config for backend statuses
+const statusConfig = {
+  pending: {
+    label: "Pending",
+    bgColor: "bg-blue-50",
+    textColor: "text-blue-700",
+    borderColor: "border-blue-200",
+  },
+  in_progress: {
+    label: "In Progress",
+    bgColor: "bg-yellow-50",
+    textColor: "text-yellow-700",
+    borderColor: "border-yellow-200",
+  },
+  resolved: {
+    label: "Resolved",
+    bgColor: "bg-green-50",
+    textColor: "text-green-700",
+    borderColor: "border-green-200",
+  },
+  fake: {
+    label: "Fake",
+    bgColor: "bg-gray-50",
+    textColor: "text-gray-700",
+    borderColor: "border-gray-200",
+  },
+};
 
 export default function TrackReportPage() {
   const [inputId, setInputId] = useState("");
@@ -142,12 +171,26 @@ export default function TrackReportPage() {
                   </CardTitle>
                   <div className="flex items-center space-x-2">
                     {getStatusIcon(searchResult.status)}
-                    <Badge
-                      variant="outline"
-                      className={`${statusConfig[searchResult.status].bgColor} ${statusConfig[searchResult.status].textColor} ${statusConfig[searchResult.status].borderColor}`}
-                    >
-                      {statusConfig[searchResult.status].label}
-                    </Badge>
+                    {(() => {
+                      const status = searchResult.status;
+                      const config = statusConfig[status];
+                      if (!config) {
+                        console.warn(`Unknown status: '${status}'`, searchResult);
+                        return (
+                          <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-200">
+                            {status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ') : 'Unknown'}
+                          </Badge>
+                        );
+                      }
+                      return (
+                        <Badge
+                          variant="outline"
+                          className={`${config.bgColor} ${config.textColor} ${config.borderColor}`}
+                        >
+                          {config.label}
+                        </Badge>
+                      );
+                    })()}
                   </div>
                 </div>
                 <CardDescription>Report ID: {searchResult.id}</CardDescription>
@@ -158,26 +201,40 @@ export default function TrackReportPage() {
                     <Clock className="h-4 w-4 text-gray-500" />
                     <div>
                       <p className="text-sm font-medium">Reported</p>
-                      <p className="text-sm text-gray-600">{formatDate(searchResult.createdAt)}</p>
+                      <p className="text-sm text-gray-600">{formatDate(searchResult.created_at)}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <MapPin className="h-4 w-4 text-gray-500" />
                     <div>
                       <p className="text-sm font-medium">Location</p>
-                      <p className="text-sm text-gray-600">{searchResult.location}</p>
+                      <p className="text-sm text-gray-600">{searchResult.location_description}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <AlertTriangle className="h-4 w-4 text-gray-500" />
                     <div>
                       <p className="text-sm font-medium">Severity</p>
-                      <Badge
-                        variant="outline"
-                        className={`${severityConfig[searchResult.severity].bgColor} ${severityConfig[searchResult.severity].textColor}`}
-                      >
-                        {severityConfig[searchResult.severity].label}
-                      </Badge>
+                      {(() => {
+                        const severity = searchResult.severity_level;
+                        const config = severityConfig[severity];
+                        if (!config) {
+                          console.warn(`Unknown severity: '${severity}'`, searchResult);
+                          return (
+                            <Badge variant="outline" className="bg-gray-100 text-gray-700">
+                              {severity ? severity.charAt(0).toUpperCase() + severity.slice(1).replace(/_/g, ' ') : 'Unknown'}
+                            </Badge>
+                          );
+                        }
+                        return (
+                          <Badge
+                            variant="outline"
+                            className={`${config.bgColor} ${config.textColor}`}
+                          >
+                            {config.label}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -185,7 +242,7 @@ export default function TrackReportPage() {
             </Card>
 
             {/* Status Timeline */}
-            <Card>
+            {/* <Card>
               <CardHeader>
                 <CardTitle>Status Timeline</CardTitle>
               </CardHeader>
@@ -261,10 +318,10 @@ export default function TrackReportPage() {
                   )}
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
 
             {/* Report Details */}
-            <Card>
+            {/* <Card>
               <CardHeader>
                 <CardTitle>Report Details</CardTitle>
               </CardHeader>
@@ -302,7 +359,7 @@ export default function TrackReportPage() {
                   </div>
                 )}
               </CardContent>
-            </Card>
+            </Card> */}
 
             {/* Contact Information */}
             <Card>

@@ -319,6 +319,7 @@ export default function ReportDisasterPage() {
           <CardContent className="space-y-6">
             <Form {...form}>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                
                 {/* Emergency Type */}
                 <FormField
                   control={control}
@@ -615,6 +616,37 @@ export default function ReportDisasterPage() {
                   )}
                 />
 
+
+{/* Full Name */}
+<div className="grid grid-cols-2 gap-3">
+  <FormField
+                    control={control}
+                    name="full_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Enter your full name" disabled />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  {/* Phone Number */}
+                  <FormField
+                    control={control}
+                    name="phone_number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Enter your phone number" disabled />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+</div>
                 {/* Report Summary */}
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="font-medium text-gray-900 mb-3">Report Summary</h3>

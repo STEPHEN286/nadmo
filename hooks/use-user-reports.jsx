@@ -4,7 +4,7 @@ import { BASE_URL } from "@/lib/utils.js";
 
 const fetchUserReports = async (userId) => {
   if (!userId) return [];
-  const response = await axios.get(`${BASE_URL}/reports/${userId}/`);
+  const response = await axios.get(`${BASE_URL}/reports/reporter/${userId}/`);
   return response.data;
 };
 

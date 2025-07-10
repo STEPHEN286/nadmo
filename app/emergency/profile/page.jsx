@@ -17,19 +17,38 @@ import {
   Settings, 
   FileText, 
   Calendar, 
-  MapPin, 
+
   Phone, 
   Mail, 
   Edit, 
   Save, 
   X,
-  AlertTriangle,
+ 
   CheckCircle,
-  Clock,
+
   Eye
 } from "lucide-react"
 import { BackButton } from "@/components/ui/back-button"
 import useUserReports from "@/hooks/use-user-reports";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertTriangle, MapPin, Clock, User as UserIcon, Shield } from "lucide-react";
+import { severityConfig } from "@/lib/disaster-data";
+import { useQuery } from "@tanstack/react-query";
+import { BASE_URL } from "@/lib/utils";
+
+// Move this hook to the top-level so it is accessible everywhere in the file
+function useReporterViewReport(id) {
+  return useQuery({
+    queryKey: ["report", id],
+    queryFn: async () => {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || BASE_URL}/reports/public/${id}/`);
+      if (!response.ok) throw new Error("Failed to fetch report");
+      return response.json();
+    },
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+  });
+}
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -41,6 +60,8 @@ export default function ProfilePage() {
     region: "",
     district: "",
   })
+  const [viewReportId, setViewReportId] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   // Use the hook to fetch user reports
   const { data: reports = [], isLoading: reportsLoading, error: reportsError } = useUserReports(user?.id)
@@ -340,7 +361,14 @@ export default function ProfilePage() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => router.push(`/emergency/track-report?id=${report.id}`)}
+                                    onClick={() => {
+                                      if (user.role?.toLowerCase() === "reporter") {
+                                        setViewReportId(report.id);
+                                        setModalOpen(true);
+                                      } else {
+                                        router.push(`/reports/${report.id}`);
+                                      }
+                                    }}
                                   >
                                     <Eye className="h-4 w-4 mr-1" />
                                     View
@@ -475,6 +503,107 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+      {/* Modal for reporter view report */}
+      {user.role?.toLowerCase() === "reporter" && (
+        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Report Details</DialogTitle>
+              <DialogDescription>View your emergency report</DialogDescription>
+            </DialogHeader>
+            {viewReportId && (
+              <ReporterViewReportModalContent reportId={viewReportId} />
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
+} 
+
+// Modal content component
+function ReporterViewReportModalContent({ reportId }) {
+  const { data: report, isLoading, error } = useReporterViewReport(reportId);
+  const statusConfig = {
+    pending: {
+      label: "Pending",
+      bgColor: "bg-blue-50",
+      textColor: "text-blue-700",
+      borderColor: "border-blue-200",
+    },
+    in_progress: {
+      label: "In Progress",
+      bgColor: "bg-yellow-50",
+      textColor: "text-yellow-700",
+      borderColor: "border-yellow-200",
+    },
+    resolved: {
+      label: "Resolved",
+      bgColor: "bg-green-50",
+      textColor: "text-green-700",
+      borderColor: "border-green-200",
+    },
+    fake: {
+      label: "Fake",
+      bgColor: "bg-gray-50",
+      textColor: "text-gray-700",
+      borderColor: "border-gray-200",
+    },
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600" />
+        <span className="ml-2 text-gray-600">Loading...</span>
+      </div>
+    );
+  }
+  if (error || !report) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[200px] text-center">
+        <AlertTriangle className="h-8 w-8 text-red-400 mb-2" />
+        <h3 className="text-base font-medium text-gray-900 mb-1">Report Not Found</h3>
+        <p className="text-gray-600 mb-2 text-sm">Unable to load this report. Please check the link or try again.</p>
+      </div>
+    );
+  }
+  const status = report.status;
+  const statusCfg = statusConfig[status] || {};
+  const severity = report.severity_level;
+  const severityCfg = severityConfig[severity] || {};
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center space-x-2">
+        <span className={`px-2 py-1 rounded text-xs font-semibold ${statusCfg.bgColor || "bg-gray-100"} ${statusCfg.textColor || "text-gray-700"} ${statusCfg.borderColor || "border-gray-200"}`}>{statusCfg.label || status}</span>
+        <span className="text-xs text-gray-500">ID: {report.id}</span>
+      </div>
+      <div className="flex items-center space-x-2">
+        <Clock className="h-4 w-4 text-gray-500" />
+        <span className="text-sm text-gray-600">{new Date(report.created_at).toLocaleString("en-GB")}</span>
+      </div>
+      <div className="flex items-center space-x-2">
+        <MapPin className="h-4 w-4 text-gray-500" />
+        <span className="text-sm text-gray-600">{report.location_description}</span>
+      </div>
+      <div className="flex items-center space-x-2">
+        <AlertTriangle className="h-4 w-4 text-gray-500" />
+        <span className={`px-2 py-1 rounded text-xs font-semibold ${severityCfg.bgColor || "bg-gray-100"} ${severityCfg.textColor || "text-gray-700"}`}>{severityCfg.label || severity}</span>
+      </div>
+      <div>
+        <h4 className="font-medium mb-1">Description</h4>
+        <p className="text-gray-700 text-sm">{report.description || <span className="italic text-gray-400">No description provided.</span>}</p>
+      </div>
+      <div className="flex items-center space-x-2 mt-2">
+        <UserIcon className="h-4 w-4 text-gray-500" />
+        <span className="text-sm">Reported by: {report.reporter?.email || "Anonymous"}</span>
+      </div>
+      {report.reporter?.profile?.phone_number && (
+        <div className="flex items-center space-x-2 mt-1">
+          <Shield className="h-4 w-4 text-gray-500" />
+          <span className="text-sm">Phone: {report.reporter.profile.phone_number}</span>
+        </div>
+      )}
+    </div>
+  );
 } 
