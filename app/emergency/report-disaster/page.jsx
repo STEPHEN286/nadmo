@@ -1,6 +1,6 @@
 "use client"
 
-
+import React, { useState, useRef, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -48,11 +48,16 @@ const reportSchema = z.object({
 });
 
 export default function ReportDisasterPage() {
-  // const [isSubmitting, setIsSubmitting] = useState(false)
- const router = useRouter()
+  const router = useRouter()
   const { toast } = useToast()
- 
   const { user } = useReporterAuth();
+  
+  // Camera state
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const videoRef = useRef(null);
+  const fileInputRef = useRef(null);
   const form = useForm({
     resolver: zodResolver(reportSchema),
     defaultValues: {
@@ -69,11 +74,7 @@ export default function ReportDisasterPage() {
   const watchedImages = watch("photo");
 
   // Add useReportIssue with onSuccess redirect
-  const { mutate: reportIssue, isLoading } = useReportIssue({
-    onSuccess: () => {
-      router.push("/emergency/report-confirmation");
-    },
-  });
+  const { mutate: reportIssue, isLoading } = useReportIssue();
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -87,6 +88,7 @@ export default function ReportDisasterPage() {
           });
         },
         (error) => {
+          console.log(error)
           toast({
             title: "Location error",
             description: "Unable to detect your location. Please enter manually.",
@@ -97,9 +99,133 @@ export default function ReportDisasterPage() {
     }
   };
 
+  // Camera functions
+  const startCamera = async () => {
+    try {
+      console.log('Starting camera...');
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: true 
+      });
+      
+      console.log('Stream obtained:', stream);
+      setCameraStream(stream);
+      setShowCamera(true);
+      
+      // Wait for the video element to be rendered
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          console.log('Video element set');
+          
+          // Set ready immediately
+          setCameraReady(true);
+          console.log('Camera ready state set to true');
+          console.log('Camera should be ready now!');
+        } else {
+          console.error('Video ref is still null after delay');
+        }
+      }, 100); // Small delay to ensure video element is rendered
+      
+    } catch (error) {
+      console.error('Camera access error:', error);
+      console.error('Error details:', error.message);
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setShowCamera(false);
+    setCameraReady(false);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && cameraReady) {
+      try {
+        console.log('Capturing photo...');
+        
+        const canvas = document.createElement('canvas');
+        const video = videoRef.current;
+        
+        // Use actual video dimensions or fallback to reasonable size
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        
+        console.log('Canvas size:', canvas.width, 'x', canvas.height);
+        
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convert to blob
+        canvas.toBlob((blob) => {
+          if (blob && blob.size > 0) {
+            const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            const currentPhotos = watchedImages || [];
+            const newPhotos = [...currentPhotos, file];
+            setValue("photo", newPhotos);
+            
+            console.log('Photo captured successfully:', file);
+            console.log('File size:', file.size);
+            
+            stopCamera();
+            toast({
+              title: "Photo captured",
+              description: "Photo has been added to your report.",
+            });
+          } else {
+            console.error('Failed to create blob');
+            toast({
+              title: "Photo capture failed",
+              description: "Failed to capture photo. Please try again.",
+              variant: "destructive",
+            });
+          }
+        }, 'image/jpeg', 0.8);
+        
+      } catch (error) {
+        console.error('Error capturing photo:', error);
+        toast({
+          title: "Photo capture failed",
+          description: "An error occurred while capturing the photo.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
-    setValue("photo", [...(watchedImages || []), ...files]);
+    
+    // Validate files before adding
+    const validFiles = files.filter(file => {
+      if (file.size === 0) {
+        console.error('Skipping empty file:', file.name);
+        toast({
+          title: "Invalid file",
+          description: `${file.name} is empty and cannot be uploaded.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      if (!file.type.startsWith('image/')) {
+        console.error('Skipping non-image file:', file.name, file.type);
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} is not an image file.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      return true;
+    });
+    
+    if (validFiles.length > 0) {
+      setValue("photo", [...(watchedImages || []), ...validFiles]);
+      console.log('Added valid files:', validFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
+    }
   };
 
   const removeImage = (index) => {
@@ -108,6 +234,22 @@ export default function ReportDisasterPage() {
       (watchedImages || []).filter((_, i) => i !== index)
     );
   };
+
+  // Clean up empty files from the state
+  const cleanupEmptyFiles = () => {
+    const currentPhotos = watchedImages || [];
+    const validPhotos = currentPhotos.filter(file => file && file.size > 0);
+    
+    if (validPhotos.length !== currentPhotos.length) {
+      console.log('Cleaning up empty files:', currentPhotos.length - validPhotos.length, 'removed');
+      setValue("photo", validPhotos);
+    }
+  };
+
+  // Run cleanup when component mounts and when watchedImages changes
+  useEffect(() => {
+    cleanupEmptyFiles();
+  }, [watchedImages]);
 
   const onSubmit = (data) => {
     // console.log("Form data:", data);
@@ -309,44 +451,164 @@ export default function ReportDisasterPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Photos (Helpful but Optional)</FormLabel>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                        <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600 mb-2">
-                          Take photos to help emergency responders understand the situation
-                        </p>
+                      
+                      {/* Camera Interface */}
+                      {showCamera && (
+                        <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
+                          <div className="relative w-full h-full max-w-2xl max-h-2xl">
+                            <video
+                              ref={videoRef}
+                              autoPlay
+                              playsInline
+                              className="w-full h-full object-cover"
+                            />
+                            
+                            {/* Camera Status Indicator */}
+                            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-4 py-2 rounded-lg">
+                              <div className="flex items-center space-x-2">
+                                {!cameraReady ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    <span>Starting camera...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                                    <span>Camera Ready!</span>
+                                  </>
+                                )}
+                              </div>
+                              <div className="text-xs mt-1">
+                                Debug: cameraReady = {cameraReady.toString()}
+                              </div>
+                            </div>
+                            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4">
+                              <Button
+                                onClick={capturePhoto}
+                                disabled={!cameraReady}
+                                className={`px-6 py-3 rounded-full ${
+                                  cameraReady 
+                                    ? 'bg-red-600 hover:bg-red-700 text-white' 
+                                    : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                }`}
+                              >
+                                <Camera className="h-5 w-5 mr-2" />
+                                {cameraReady ? 'Capture Photo' : 'Initializing...'}
+                              </Button>
+                              
+                              {!cameraReady && (
+                                <Button
+                                  onClick={() => {
+                                    console.log('Force ready clicked');
+                                    setCameraReady(true);
+                                    toast({
+                                      title: "Camera Ready (Manual)",
+                                      description: "Camera manually enabled for capture.",
+                                    });
+                                  }}
+                                  variant="outline"
+                                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-full"
+                                >
+                                  Force Ready
+                                </Button>
+                              )}
+                              
+                              <Button
+                                onClick={stopCamera}
+                                variant="outline"
+                                className="bg-white text-gray-900 px-6 py-3 rounded-full"
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Upload Interface */}
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                        <div className="text-center mb-4">
+                          <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-600 mb-4">
+                            Take photos to help emergency responders understand the situation
+                          </p>
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                          <Button 
+                            type="button"
+                            variant="outline" 
+                            onClick={startCamera}
+                            className="flex items-center justify-center"
+                          >
+                            <Camera className="h-4 w-4 mr-2" />
+                            Open Camera
+                          </Button>
+                          
+                          <Button 
+                            type="button"
+                            variant="outline" 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex items-center justify-center"
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Upload Photos
+                          </Button>
+                        </div>
+                        
                         <input
+                          ref={fileInputRef}
                           type="file"
-                          id="photo"
                           multiple
                           accept="image/*"
-                          capture="environment"
                           onChange={handleImageUpload}
                           className="hidden"
                         />
-                        <Button variant="outline" onClick={() => document.getElementById("photo").click()}>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Take Photo / Upload
-                        </Button>
                       </div>
+
+                      {/* Image Preview */}
                       {watchedImages && watchedImages.length > 0 && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
-                          {watchedImages.map((file, index) => (
-                            <div key={index} className="relative">
-                              <img
-                                src={URL.createObjectURL(file) || "/placeholder.svg"}
-                                alt={`Upload ${index + 1}`}
-                                className="w-full h-20 object-cover rounded border"
-                              />
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                                onClick={() => removeImage(index)}
-                              >
-                                ×
-                              </Button>
-                            </div>
-                          ))}
+                        <div className="mt-4">
+                          <p className="text-sm font-medium text-gray-700 mb-2">
+                            Uploaded Photos ({watchedImages.length})
+                          </p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {watchedImages.map((file, index) => {
+                              console.log('Rendering file:', file, 'at index:', index, 'size:', file.size);
+                              
+                              // Skip rendering if file is empty
+                              if (!file || file.size === 0) {
+                                console.error('Skipping empty file at index:', index);
+                                return null;
+                              }
+                              
+                              return (
+                                <div key={index} className="relative group">
+                                  <img
+                                    src={URL.createObjectURL(file)}
+                                    alt={`Photo ${index + 1}`}
+                                    className="w-full h-24 object-cover rounded-lg border"
+                                    onError={(e) => {
+                                      console.error('Image failed to load:', file);
+                                      // Use a data URL placeholder instead of a file
+                                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik04MCAxMDBDODAgODkuNTQ0NyA4OC4wMDAxIDgxIDEwMCA4MUMxMTEuMDQ2IDgxIDExOSA4OS41NDQ3IDExOSAxMDBDMTE5IDExMC40NTUgMTExLjA0NiAxMTkgMTAwIDExOUM4OC4wMDAxIDExOSA4MCAxMTAuNDU1IDgwIDEwMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHAgZmlsbD0iIzlDQTNBRiIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0Ij5QaG90byBFcnJvcjwvcD4KPC9zdmc+';
+                                    }}
+                                  />
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => removeImage(index)}
+                                  >
+                                    ×
+                                  </Button>
+                                  <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                                    Photo {index + 1}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                     </FormItem>
