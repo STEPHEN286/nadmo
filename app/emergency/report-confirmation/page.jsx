@@ -9,18 +9,28 @@ import { useToast } from "@/hooks/use-toast"
 import { BackButton } from "@/components/ui/back-button"
 import { useRouter, useSearchParams } from "next/navigation"
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 function ReportConfirmationContent() {
   const [reportId, setReportId] = useState("")
+  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
   const router = useRouter()
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    // Get report ID from URL query parameter
-    const urlReportId = searchParams.get("id")
-    if (urlReportId) {
-      setReportId(urlReportId)
-    } 
+    try {
+      // Get report ID from URL query parameter
+      const urlReportId = searchParams.get("id")
+      if (urlReportId) {
+        setReportId(urlReportId)
+      }
+      setIsLoading(false)
+    } catch (error) {
+      console.error('Error getting search params:', error)
+      setIsLoading(false)
+    }
   }, [searchParams])
 
   const copyReportId = () => {
@@ -29,6 +39,17 @@ function ReportConfirmationContent() {
       title: "Copied!",
       description: "Report ID copied to clipboard",
     })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
