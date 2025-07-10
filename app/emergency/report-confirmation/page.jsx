@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, Clock, Phone, Copy, Search } from "lucide-react"
@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast"
 import { BackButton } from "@/components/ui/back-button"
 import { useRouter, useSearchParams } from "next/navigation"
 
-export default function ReportConfirmationPage() {
+function ReportConfirmationContent() {
   const [reportId, setReportId] = useState("")
   const { toast } = useToast()
   const router = useRouter()
@@ -141,5 +141,24 @@ export default function ReportConfirmationPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    </div>
+  )
+}
+
+export default function ReportConfirmationPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ReportConfirmationContent />
+    </Suspense>
   )
 }

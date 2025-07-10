@@ -108,7 +108,7 @@ export default function ReportDisasterPage() {
         video: true 
       });
       
-      console.log('Stream obtained:', stream);
+      // console.log('Stream obtained:', stream);
       setCameraStream(stream);
       setShowCamera(true);
       
