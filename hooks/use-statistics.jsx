@@ -108,9 +108,9 @@ const fetchStatistics = async () => {
       throw new Error("Authentication required");
     }
 
-    console.log("Attempting to fetch statistics from:", `${BASE_URL}/reports/stats/`);
+   
     
-    const response = await axios.get(`${BASE_URL}/reports/stats/`, {
+    const response = await axios.get(`${BASE_URL}/dashboard/stats/`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'

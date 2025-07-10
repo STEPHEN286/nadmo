@@ -8,7 +8,7 @@ export const useDeleteUser = () => {
 
   return useMutation({
     mutationFn: async (userId) => {
-      const { data } = await axios.delete(`/api/users/${userId}` );
+      const { data } = await axios.delete(`/api/users/${userId}/`);
       return data;
     },
     onSuccess: (data) => {

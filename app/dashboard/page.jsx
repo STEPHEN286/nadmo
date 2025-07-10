@@ -10,73 +10,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineCh
 import { AlertTriangle, Clock, CheckCircle, XCircle, MapPin, Users, Phone, Eye } from "lucide-react"
 import { useState } from "react"
 import SwiperCarousel from "@/components/ui/swiper-carousel"
-
-// Mock disaster data
-const disasterStats = [
-  { name: "Active Alerts", value: 7, icon: AlertTriangle, color: "text-red-600", bgColor: "bg-red-50" },
-  { name: "Resolved Today", value: 12, icon: CheckCircle, color: "text-green-600", bgColor: "bg-green-50" },
-  { name: "Pending Review", value: 23, icon: Clock, color: "text-yellow-600", bgColor: "bg-yellow-50" },
-  { name: "False Reports", value: 5, icon: XCircle, color: "text-gray-600", bgColor: "bg-gray-50" },
-]
-
-const recentAlerts = [
-  {
-    id: "DA-001",
-    type: "Flood",
-    location: "Accra Central",
-    severity: "Critical",
-    time: "15 mins ago",
-    status: "Active",
-    reporter: "John Mensah",
-    coordinates: "5.6037, -0.1870",
-  },
-  {
-    id: "DA-002",
-    type: "Fire",
-    location: "Kumasi Market",
-    severity: "High",
-    time: "1 hour ago",
-    status: "Responding",
-    reporter: "Mary Asante",
-    coordinates: "6.6885, -1.6244",
-  },
-  {
-    id: "DA-003",
-    type: "Accident",
-    location: "Tema Highway",
-    severity: "Medium",
-    time: "2 hours ago",
-    status: "Resolved",
-    reporter: "Anonymous",
-    coordinates: "5.6698, 0.0166",
-  },
-  {
-    id: "DA-004",
-    type: "Landslide",
-    location: "Cape Coast Hills",
-    severity: "High",
-    time: "3 hours ago",
-    status: "Monitoring",
-    reporter: "Grace Osei",
-    coordinates: "5.1053, -1.2466",
-  },
-]
-
-const responseTimeData = [
-  { hour: "00:00", avgTime: 12 },
-  { hour: "04:00", avgTime: 8 },
-  { hour: "08:00", avgTime: 15 },
-  { hour: "12:00", avgTime: 18 },
-  { hour: "16:00", avgTime: 22 },
-  { hour: "20:00", avgTime: 14 },
-]
-
-const disasterTypeData = [
-  { type: "Floods", count: 15, resolved: 8 },
-  { type: "Fires", count: 12, resolved: 9 },
-  { type: "Accidents", count: 18, resolved: 15 },
-  { type: "Others", count: 8, resolved: 5 },
-]
+import useStatistics from "@/hooks/use-statistics"
+import { useRegions } from "@/hooks/use-regions"
+import { useDistricts } from "@/hooks/use-districts"
 
 // Emergency alerts for carousel
 const emergencyAlerts = [
@@ -136,7 +72,12 @@ const emergencyAlerts = [
 
 export default function dashboard() {
     const [selectedRegion, setSelectedRegion] = useState("all")
-  const [timeFilter, setTimeFilter] = useState("24h")
+  const [selectedDistrict, setSelectedDistrict] = useState("all")
+  const [timeFilter, setTimeFilter] = useState("all-days")
+  
+  const { data: stats, isLoading, error } = useStatistics()
+  const { data: regions } = useRegions()
+  const { data: districts } = useDistricts(selectedRegion !== "all" ? selectedRegion : null)
 
   const getSeverityBadge = (severity) => {
     const variants = {
@@ -157,6 +98,231 @@ export default function dashboard() {
     }
     return <Badge variant={variants[status]}>{status}</Badge>
   }
+
+  // Filter data based on selected filters
+  const filterDataByTime = (data, filter) => {
+    if (!data || filter === "all" || filter === "all-days") return data;
+    
+    const now = new Date();
+    let cutoffDate;
+    
+    switch (filter) {
+      case "1h":
+        cutoffDate = new Date(now.getTime() - 60 * 60 * 1000);
+        break;
+      case "24h":
+        cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        break;
+      case "7d":
+        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "30d":
+        cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case "all-days":
+        return data; // Show all available data
+      default:
+        return data;
+    }
+    
+    // For daily trends, filter by date
+    if (Array.isArray(data)) {
+      return data.filter(item => {
+        const itemDate = new Date(item.day);
+        return itemDate >= cutoffDate;
+      });
+    }
+    
+    return data;
+  };
+
+  const filterDataByRegion = (data, filter) => {
+    if (!data || filter === "all") return data;
+    
+    // For region breakdown, filter by region
+    if (Array.isArray(data)) {
+      return data.filter(item => {
+        const regionId = item.reporter__profile__region;
+        
+        // Handle null region values
+        if (filter === "no-region") {
+          return regionId === null;
+        }
+        
+        if (!regionId) return false;
+        
+        // Find the region name from the regions data
+        const region = regions?.find(r => r.id === regionId);
+        if (!region) return false;
+        
+        // Convert region name to match filter format
+        const regionName = region.name.toLowerCase().replace(/\s+/g, '-');
+        return regionName === filter;
+      });
+    }
+    
+    return data;
+  };
+
+  const filterDataByDistrict = (data, filter) => {
+    if (!data || filter === "all") return data;
+    
+    // For district breakdown, filter by district
+    if (Array.isArray(data)) {
+      return data.filter(item => {
+        const districtId = item.reporter__profile__district;
+        
+        // Handle null district values
+        if (filter === "no-district") {
+          return districtId === null;
+        }
+        
+        if (!districtId) return false;
+        
+        // Find the district name from the districts data
+        const district = districts?.find(d => d.id === districtId);
+        if (!district) return false;
+        
+        // Convert district name to match filter format
+        const districtName = district.name.toLowerCase().replace(/\s+/g, '-');
+        return districtName === filter;
+      });
+    }
+    
+    return data;
+  };
+
+  // Apply filters to the data
+  const filteredDailyTrends = filterDataByTime(stats?.daily_trends, timeFilter);
+  const filteredRegionBreakdown = filterDataByRegion(stats?.region_breakdown, selectedRegion);
+  const filteredDistrictBreakdown = filterDataByDistrict(stats?.district_breakdown, selectedDistrict);
+
+  // Transform API data for charts with filtering
+  const disasterTypeData = stats?.reports_by_type?.map(item => ({
+    type: item.disaster_type.charAt(0).toUpperCase() + item.disaster_type.slice(1),
+    count: item.count
+  })) || []
+
+  const dailyTrendsData = filteredDailyTrends?.map(item => ({
+    day: new Date(item.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    count: item.count
+  })) || []
+
+  const statusData = stats?.reports_by_status?.map(item => ({
+    status: item.status.charAt(0).toUpperCase() + item.status.slice(1),
+    count: item.count
+  })) || []
+
+  // Transform region breakdown data with region names
+  const regionData = stats?.region_breakdown?.map(item => {
+    if (item.reporter__profile__region === null) {
+      return {
+        region: 'No Region Assigned',
+        count: item.count
+      };
+    }
+    
+    const region = regions?.find(r => r.id === item.reporter__profile__region);
+    return {
+      region: region ? region.name : 'Unknown Region',
+      count: item.count
+    };
+  }).filter(item => item.region !== 'Unknown Region') || []
+
+  // Transform district breakdown data with district names
+  const districtData = stats?.district_breakdown?.map(item => {
+    if (item.reporter__profile__district === null) {
+      return {
+        district: 'No District Assigned',
+        count: item.count
+      };
+    }
+    
+    const district = districts?.find(d => d.id === item.reporter__profile__district);
+    return {
+      district: district ? district.name : 'Unknown District',
+      count: item.count
+    };
+  }).filter(item => item.district !== 'Unknown District') || []
+
+  // Calculate filtered totals
+  const filteredTotalReports = filteredDailyTrends?.reduce((sum, item) => sum + item.count, 0) || stats?.total_reports || 0;
+  const filteredResolved = stats?.resolved_vs_pending?.resolved || 0;
+  const filteredPending = stats?.resolved_vs_pending?.pending || 0;
+
+  if (isLoading) {
+    return (
+      <NadmoLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-lg">Loading dashboard statistics...</div>
+          </div>
+        </div>
+      </NadmoLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <NadmoLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-lg text-red-600">Error loading dashboard statistics</div>
+          </div>
+        </div>
+      </NadmoLayout>
+    )
+  }
+
+  // Real stats cards data with filtering
+  const disasterStats = [
+    { 
+      name: "Total Reports", 
+      value: filteredTotalReports, 
+      icon: AlertTriangle, 
+      color: "text-blue-600", 
+      bgColor: "bg-blue-50" 
+    },
+    { 
+      name: "Resolved", 
+      value: filteredResolved, 
+      icon: CheckCircle, 
+      color: "text-green-600", 
+      bgColor: "bg-green-50" 
+    },
+    { 
+      name: "Pending", 
+      value: filteredPending, 
+      icon: Clock, 
+      color: "text-yellow-600", 
+      bgColor: "bg-yellow-50" 
+    },
+    { 
+      name: "Active Alerts", 
+      value: filteredPending, 
+      icon: AlertTriangle, 
+      color: "text-red-600", 
+      bgColor: "bg-red-50" 
+    },
+  ]
+
+  // Add filter indicator
+  const getFilterIndicator = () => {
+    const indicators = [];
+    if (timeFilter !== "24h" && timeFilter !== "all-days") {
+      indicators.push(`Time: ${timeFilter}`);
+    }
+    if (selectedRegion !== "all") {
+      const regionName = selectedRegion === "no-region" ? "No Region" : selectedRegion.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+      indicators.push(`Region: ${regionName}`);
+    }
+    if (selectedDistrict !== "all") {
+      const districtName = selectedDistrict === "no-district" ? "No District" : selectedDistrict.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+      indicators.push(`District: ${districtName}`);
+    }
+    return indicators.length > 0 ? `(${indicators.join(', ')})` : '';
+  };
+
   return (
     <NadmoLayout >
       <div className="space-y-6">
@@ -164,7 +330,9 @@ export default function dashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Disaster Alert Dashboard</h1>
-            <p className="text-gray-600">Real-time emergency response monitoring</p>
+            <p className="text-gray-600">
+              Real-time emergency response monitoring {getFilterIndicator()}
+            </p>
           </div>
           <div className="flex space-x-2 mt-4 sm:mt-0">
             <Select value={timeFilter} onValueChange={setTimeFilter}>
@@ -172,24 +340,42 @@ export default function dashboard() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all-days">All Days</SelectItem>
                 <SelectItem value="1h">Last Hour</SelectItem>
                 <SelectItem value="24h">Last 24h</SelectItem>
                 <SelectItem value="7d">Last 7 days</SelectItem>
                 <SelectItem value="30d">Last 30 days</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+            <Select value={selectedRegion} onValueChange={(value) => {
+              setSelectedRegion(value);
+              setSelectedDistrict("all"); // Reset district when region changes
+            }}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Select region" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Regions</SelectItem>
-                <SelectItem value="greater-accra">Greater Accra</SelectItem>
-                <SelectItem value="ashanti">Ashanti</SelectItem>
-                <SelectItem value="western">Western</SelectItem>
-                <SelectItem value="eastern">Eastern</SelectItem>
-                <SelectItem value="northern">Northern</SelectItem>
-                <SelectItem value="central">Central</SelectItem>
+                <SelectItem value="no-region">No Region Assigned</SelectItem>
+                {regions?.map((region) => (
+                  <SelectItem key={region.id} value={region.name.toLowerCase().replace(/\s+/g, '-')}>
+                    {region.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedDistrict} onValueChange={setSelectedDistrict}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Select district" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Districts</SelectItem>
+                <SelectItem value="no-district">No District Assigned</SelectItem>
+                {districts?.map((district) => (
+                  <SelectItem key={district.id} value={district.name.toLowerCase().replace(/\s+/g, '-')}>
+                    {district.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -221,21 +407,23 @@ export default function dashboard() {
 
        
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Response Time Trends */}
+          {/* Daily Trends */}
           <Card>
             <CardHeader>
-              <CardTitle>Response Time Trends</CardTitle>
-              <CardDescription>Average response time over the last 24 hours</CardDescription>
+              <CardTitle>Daily Report Trends</CardTitle>
+              <CardDescription>
+                Number of reports submitted per day {timeFilter !== "24h" && timeFilter !== "all-days" && `(Filtered: ${timeFilter})`}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ChartContainer config={{}} className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={responseTimeData}>
+                  <LineChart data={dailyTrendsData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="hour" />
+                    <XAxis dataKey="day" />
                     <YAxis />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line type="monotone" dataKey="avgTime" stroke="#ef4444" strokeWidth={2} />
+                    <Line type="monotone" dataKey="count" stroke="#ef4444" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -246,7 +434,7 @@ export default function dashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Disaster Types</CardTitle>
-              <CardDescription>Reports by type and resolution status</CardDescription>
+              <CardDescription>Reports by disaster type</CardDescription>
             </CardHeader>
             <CardContent>
               <ChartContainer config={{}} className="h-64">
@@ -264,59 +452,73 @@ export default function dashboard() {
           </Card>
         </div>
 
-        {/* Recent Alerts Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Alerts</CardTitle>
-            <CardDescription>Latest emergency reports and their status</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">ID</th>
-                    <th className="text-left py-3 px-4 font-medium">Type</th>
-                    <th className="text-left py-3 px-4 font-medium">Location</th>
-                    <th className="text-left py-3 px-4 font-medium">Severity</th>
-                    <th className="text-left py-3 px-4 font-medium">Status</th>
-                    <th className="text-left py-3 px-4 font-medium">Time</th>
-                    <th className="text-left py-3 px-4 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentAlerts.map((alert) => (
-                    <tr key={alert.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4 font-mono text-sm">{alert.id}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-2 text-gray-400" />
-                          {alert.type}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">{alert.location}</td>
-                      <td className="py-3 px-4">{getSeverityBadge(alert.severity)}</td>
-                      <td className="py-3 px-4">{getStatusBadge(alert.status)}</td>
-                      <td className="py-3 px-4 text-sm text-gray-500">{alert.time}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex space-x-2">
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Phone className="h-4 w-4 mr-1" />
-                            Contact
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Status Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Report Status</CardTitle>
+              <CardDescription>Breakdown by status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={{}} className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={statusData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="status" />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="count" fill="#3b82f6" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+
+          {/* Region Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Reports by Region</CardTitle>
+              <CardDescription>Breakdown by region</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={{}} className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={regionData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="region" />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="count" fill="#10b981" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+
+          {/* District Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Reports by District</CardTitle>
+              <CardDescription>Breakdown by district</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={{}} className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={districtData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="district" />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="count" fill="#f59e0b" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Emergency Alerts Carousel */}
+        <SwiperCarousel alerts={emergencyAlerts} />
       </div>
     </NadmoLayout>
   )
