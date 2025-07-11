@@ -6,13 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts"
 import { AlertTriangle, Clock, CheckCircle, XCircle, MapPin, Users, Phone, Eye } from "lucide-react"
 import { useState } from "react"
 import SwiperCarousel from "@/components/ui/swiper-carousel"
 import useStatistics from "@/hooks/use-statistics"
-import { useRegions } from "@/hooks/use-regions"
-import { useDistricts } from "@/hooks/use-districts"
 
 // Emergency alerts for carousel
 const emergencyAlerts = [
@@ -71,13 +69,11 @@ const emergencyAlerts = [
 ]
 
 export default function dashboard() {
-    const [selectedRegion, setSelectedRegion] = useState("all")
-  const [selectedDistrict, setSelectedDistrict] = useState("all")
   const [timeFilter, setTimeFilter] = useState("all-days")
   
   const { data: stats, isLoading, error } = useStatistics()
-  const { data: regions } = useRegions()
-  const { data: districts } = useDistricts(selectedRegion !== "all" ? selectedRegion : null)
+  
+
 
   const getSeverityBadge = (severity) => {
     const variants = {
@@ -136,66 +132,12 @@ export default function dashboard() {
     return data;
   };
 
-  const filterDataByRegion = (data, filter) => {
-    if (!data || filter === "all") return data;
-    
-    // For region breakdown, filter by region
-    if (Array.isArray(data)) {
-      return data.filter(item => {
-        const regionId = item.reporter__profile__region;
-        
-        // Handle null region values
-        if (filter === "no-region") {
-          return regionId === null;
-        }
-        
-        if (!regionId) return false;
-        
-        // Find the region name from the regions data
-        const region = regions?.find(r => r.id === regionId);
-        if (!region) return false;
-        
-        // Convert region name to match filter format
-        const regionName = region.name.toLowerCase().replace(/\s+/g, '-');
-        return regionName === filter;
-      });
-    }
-    
-    return data;
-  };
 
-  const filterDataByDistrict = (data, filter) => {
-    if (!data || filter === "all") return data;
-    
-    // For district breakdown, filter by district
-    if (Array.isArray(data)) {
-      return data.filter(item => {
-        const districtId = item.reporter__profile__district;
-        
-        // Handle null district values
-        if (filter === "no-district") {
-          return districtId === null;
-        }
-        
-        if (!districtId) return false;
-        
-        // Find the district name from the districts data
-        const district = districts?.find(d => d.id === districtId);
-        if (!district) return false;
-        
-        // Convert district name to match filter format
-        const districtName = district.name.toLowerCase().replace(/\s+/g, '-');
-        return districtName === filter;
-      });
-    }
-    
-    return data;
-  };
+
+
 
   // Apply filters to the data
   const filteredDailyTrends = filterDataByTime(stats?.daily_trends, timeFilter);
-  const filteredRegionBreakdown = filterDataByRegion(stats?.region_breakdown, selectedRegion);
-  const filteredDistrictBreakdown = filterDataByDistrict(stats?.district_breakdown, selectedDistrict);
 
   // Transform API data for charts with filtering
   const disasterTypeData = stats?.reports_by_type?.map(item => ({
@@ -213,40 +155,15 @@ export default function dashboard() {
     count: item.count
   })) || []
 
-  // Transform region breakdown data with region names
-  const regionData = stats?.region_breakdown?.map(item => {
-    if (item.reporter__profile__region === null) {
-      return {
-        region: 'No Region Assigned',
-        count: item.count
-      };
-    }
-    
-    const region = regions?.find(r => r.id === item.reporter__profile__region);
-    return {
-      region: region ? region.name : 'Unknown Region',
-      count: item.count
-    };
-  }).filter(item => item.region !== 'Unknown Region') || []
 
-  // Transform district breakdown data with district names
-  const districtData = stats?.district_breakdown?.map(item => {
-    if (item.reporter__profile__district === null) {
-      return {
-        district: 'No District Assigned',
-        count: item.count
-      };
-    }
-    
-    const district = districts?.find(d => d.id === item.reporter__profile__district);
-    return {
-      district: district ? district.name : 'Unknown District',
-      count: item.count
-    };
-  }).filter(item => item.district !== 'Unknown District') || []
 
-  // Calculate filtered totals
-  const filteredTotalReports = filteredDailyTrends?.reduce((sum, item) => sum + item.count, 0) || stats?.total_reports || 0;
+
+
+  // Color arrays for pie charts
+  const disasterTypeColors = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
+
+  // Calculate totals
+  const filteredTotalReports = stats?.total_reports || 0;
   const filteredResolved = stats?.resolved_vs_pending?.resolved || 0;
   const filteredPending = stats?.resolved_vs_pending?.pending || 0;
 
@@ -312,31 +229,23 @@ export default function dashboard() {
     if (timeFilter !== "24h" && timeFilter !== "all-days") {
       indicators.push(`Time: ${timeFilter}`);
     }
-    if (selectedRegion !== "all") {
-      const regionName = selectedRegion === "no-region" ? "No Region" : selectedRegion.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
-      indicators.push(`Region: ${regionName}`);
-    }
-    if (selectedDistrict !== "all") {
-      const districtName = selectedDistrict === "no-district" ? "No District" : selectedDistrict.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
-      indicators.push(`District: ${districtName}`);
-    }
     return indicators.length > 0 ? `(${indicators.join(', ')})` : '';
   };
 
   return (
     <NadmoLayout >
-      <div className="space-y-6">
+      <div className="space-y-6 w-full max-w-full overflow-x-hidden">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Disaster Alert Dashboard</h1>
-            <p className="text-gray-600">
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Disaster Alert Dashboard</h1>
+            <p className="text-gray-600 text-sm lg:text-base">
               Real-time emergency response monitoring {getFilterIndicator()}
             </p>
           </div>
-          <div className="flex space-x-2 mt-4 sm:mt-0">
+          <div className="flex justify-end">
             <Select value={timeFilter} onValueChange={setTimeFilter}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-32 min-w-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -347,52 +256,21 @@ export default function dashboard() {
                 <SelectItem value="30d">Last 30 days</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={selectedRegion} onValueChange={(value) => {
-              setSelectedRegion(value);
-              setSelectedDistrict("all"); // Reset district when region changes
-            }}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Select region" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Regions</SelectItem>
-                <SelectItem value="no-region">No Region Assigned</SelectItem>
-                {regions?.map((region) => (
-                  <SelectItem key={region.id} value={region.name.toLowerCase().replace(/\s+/g, '-')}>
-                    {region.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedDistrict} onValueChange={setSelectedDistrict}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Select district" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Districts</SelectItem>
-                <SelectItem value="no-district">No District Assigned</SelectItem>
-                {districts?.map((district) => (
-                  <SelectItem key={district.id} value={district.name.toLowerCase().replace(/\s+/g, '-')}>
-                    {district.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 w-full">
           {disasterStats.map((stat) => (
             <Card key={stat.name} className="relative overflow-hidden">
-              <CardContent className="p-6">
+              <CardContent className="p-4 lg:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">{stat.name}</p>
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                    <p className="text-xs lg:text-sm font-medium text-gray-600">{stat.name}</p>
+                    <p className="text-xl lg:text-2xl font-bold text-gray-900">{stat.value}</p>
                   </div>
-                  <div className={`p-3 rounded-full ${stat.bgColor} ${stat.color}`}>
-                    <stat.icon className="h-6 w-6" />
+                  <div className={`p-2 lg:p-3 rounded-full ${stat.bgColor} ${stat.color}`}>
+                    <stat.icon className="h-5 w-5 lg:h-6 lg:w-6" />
                   </div>
                 </div>
                 {stat.name === "Active Alerts" && stat.value > 5 && (
@@ -406,17 +284,18 @@ export default function dashboard() {
         </div>
 
        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6 w-full">
           {/* Daily Trends */}
           <Card>
             <CardHeader>
-              <CardTitle>Daily Report Trends</CardTitle>
-              <CardDescription>
-                Number of reports submitted per day {timeFilter !== "24h" && timeFilter !== "all-days" && `(Filtered: ${timeFilter})`}
+              <CardTitle className="text-lg lg:text-xl">Daily Report Trends</CardTitle>
+              <CardDescription className="text-sm">
+                Number of reports submitted per day 
+                {timeFilter !== "24h" && timeFilter !== "all-days" && ` (Time: ${timeFilter})`}
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ChartContainer config={{}} className="h-64">
+            <CardContent className="w-full">
+              <ChartContainer config={{}} className="h-64 lg:h-80 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={dailyTrendsData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -433,84 +312,31 @@ export default function dashboard() {
           {/* Disaster Types */}
           <Card>
             <CardHeader>
-              <CardTitle>Disaster Types</CardTitle>
-              <CardDescription>Reports by disaster type</CardDescription>
+              <CardTitle className="text-lg lg:text-xl">Disaster Types</CardTitle>
+              <CardDescription className="text-sm">
+                Reports by disaster type
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ChartContainer config={{}} className="h-64">
+            <CardContent className="w-full">
+              <ChartContainer config={{}} className="h-64 lg:h-80 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={disasterTypeData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="type" />
-                    <YAxis />
+                  <PieChart>
+                    <Pie
+                      data={disasterTypeData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ type, percent }) => `${type} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="count"
+                    >
+                      {disasterTypeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={disasterTypeColors[index % disasterTypeColors.length]} />
+                      ))}
+                    </Pie>
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="count" fill="#ef4444" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Status Distribution */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Report Status</CardTitle>
-              <CardDescription>Breakdown by status</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={{}} className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={statusData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="status" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="count" fill="#3b82f6" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
-          {/* Region Distribution */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Reports by Region</CardTitle>
-              <CardDescription>Breakdown by region</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={{}} className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={regionData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="region" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="count" fill="#10b981" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
-          {/* District Distribution */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Reports by District</CardTitle>
-              <CardDescription>Breakdown by district</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={{}} className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={districtData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="district" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="count" fill="#f59e0b" />
-                  </BarChart>
+                  </PieChart>
                 </ResponsiveContainer>
               </ChartContainer>
             </CardContent>
