@@ -99,7 +99,7 @@ export default function NADMOLoginPage() {
               <h1 className="text-2xl font-semibold text-gray-900">
                 NADMO Emergency
               </h1>
-              <p className="text-gray-600 text-sm">Sign in to your Reporter account</p>
+              <p className="text-gray-600 text-sm">Sign in Admin Portal </p>
             </CardHeader>
 
             <CardContent className="pt-0">
@@ -174,7 +174,7 @@ export default function NADMOLoginPage() {
                       Signing in...
                     </>
                   ) : (
-                    "Sign in as Reporter"
+                    "Sign in "
                   )}
                 </Button>
               </form>
@@ -183,15 +183,15 @@ export default function NADMOLoginPage() {
                 <p className="text-sm text-gray-600">
                   Need help? Contact your NADMO administrator
                 </p>
-                <p className="text-sm text-gray-600 mt-2">
+                {/* <p className="text-sm text-gray-600 mt-2">
                   Don't have an account?{" "}
                   <Link href="/signup" className="text-red-600 hover:text-red-700 font-medium">
                     Sign up as Reporter
                   </Link>
-                </p>
-                <p className="text-sm text-gray-500 mt-2">
+                </p> */}
+                {/* <p className="text-sm text-gray-500 mt-2">
                   Reporters can submit emergency reports and track their status
-                </p>
+                </p> */}
               </div>
             </CardContent>
           </Card>
