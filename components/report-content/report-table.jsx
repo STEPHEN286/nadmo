@@ -34,6 +34,8 @@ export function ReportTable({
   emptyMessage = "No data available",
   rowActions = [],
   className = "",
+  next = null,
+  previous = null,
 }) {
   const [localSortField, setLocalSortField] = useState(sortField)
   const [localSortDirection, setLocalSortDirection] = useState(sortDirection)
@@ -174,9 +176,11 @@ export function ReportTable({
     )
   }
 
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedData = data.slice(startIndex, endIndex)
+  // Remove client-side pagination
+  // const startIndex = (currentPage - 1) * itemsPerPage
+  // const endIndex = startIndex + itemsPerPage
+  // const paginatedData = data.slice(startIndex, endIndex)
+  const paginatedData = data;
 
   return (
     <Card className={className}>
@@ -296,7 +300,7 @@ export function ReportTable({
                 variant="outline"
                 size="sm"
                 onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
+                disabled={!previous || currentPage === 1}
               >
                 Previous
               </Button>
@@ -304,7 +308,7 @@ export function ReportTable({
                 variant="outline"
                 size="sm"
                 onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
+                disabled={!next || currentPage === totalPages}
               >
                 Next
               </Button>

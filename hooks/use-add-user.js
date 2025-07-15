@@ -1,10 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import axios from "axios";
+import { BASE_URL } from "@/lib/utils";
 
 const postUser = async (userData) => {
+  console.log("postUser called with:", userData);
   try {
-    const response = await axios.post('/api/users', userData);
+    const response = await axios.post(`${BASE_URL}/users/`, userData);
     return response.data;
   } catch (error) {
     const errorMessage = error.response?.data?.error || error.message || 'Failed to add user';
@@ -14,7 +16,7 @@ const postUser = async (userData) => {
 
 const updateUserData = async ({ id, userData }) => {
   try {
-    const response = await axios.put(`/api/users/${id}`, userData);
+    const response = await axios.put(`${BASE_URL}/users/${id}`, userData);
     return response.data;
   } catch (error) {
     const errorMessage = error.response?.data?.error || error.message || 'Failed to update user';
@@ -43,6 +45,7 @@ export function useAddUser() {
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (error) => {
+      console.log("Mutation error:", error);
       toast({
         title: "Error adding user",
         description: error.message || "Something went wrong. Please try again.",
@@ -73,6 +76,7 @@ export function useAddUser() {
   });
 
   const addUser = (userData) => {
+    console.log("Calling addUser", userData);
     return addUserMutation.mutate(userData);
   };
 

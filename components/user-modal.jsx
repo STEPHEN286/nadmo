@@ -25,47 +25,40 @@ import { useAddUser } from "@/hooks/use-add-user";
 import { useDistricts } from "@/hooks/use-districts";
 import { useRegions } from "@/hooks/use-regions";
 // import CommunityAutocomplete from "@/components/community-autocomplete";
+import { ROLES } from "@/lib/constants";
 
 const userSchema = z
   .object({
     fullName: z.string().min(2, "Name must be at least 2 characters"),
     email: z.string().email("Invalid email address"),
-    phone: z.string().regex(/^\d{10}$/, "Phone must be a 10-digit number"),
-    role: z.enum(
-      ["ADMIN", "GES_REGIONAL_OFFICER", "GES_DISTRICT_OFFICER", "REPORTER"],
-      {
-        required_error: "Please select a role",
-      }
-    ),
+    phone: z.string().regex(/^[0-9]{10}$/, "Phone must be a 10-digit number"),
+    role: z.enum(ROLES, {
+      required_error: "Please select a role",
+    }),
     region: z.string().optional(),
     district: z.string().optional(),
-    community: z.object({
-      id: z.string(),
-      name: z.string()
-    }).optional(),
     status: z.enum(["active", "inactive"], {
       required_error: "Please select a status",
     }),
   })
   .refine(
     (data) => {
-      if (
-        data.role === "GES_REGIONAL_OFFICER" ||
-        data.role === "GES_DISTRICT_OFFICER" ||
-        data.role === "REPORTER"
-      ) {
+      // region required for all except admin
+      if (ROLES.indexOf(data.role) > 0) {
         return !!data.region;
       }
       return true;
     },
     {
-      message: "Region is required for Regional Officers, District Officers, and Field Reporters",
+      message:
+        "Region is required for Regional Officers, District Officers, and Field Reporters",
       path: ["region"],
     }
   )
   .refine(
     (data) => {
-      if (data.role === "GES_DISTRICT_OFFICER" || data.role === "REPORTER") {
+      // district required for district_officer and reporter
+      if (ROLES.indexOf(data.role) > 1) {
         return !!data.district;
       }
       return true;
@@ -73,18 +66,6 @@ const userSchema = z
     {
       message: "District is required for District Officers and Field Reporters",
       path: ["district"],
-    }
-  )
-  .refine(
-    (data) => {
-      if (data.role === "REPORTER") {
-        return !!data.community && !!data.community.id;
-      }
-      return true;
-    },
-    {
-      message: "Community is required for Field Reporters",
-      path: ["community"],
     }
   );
 
@@ -116,25 +97,25 @@ export default function UserModal({
       email: "",
       phone: "",
       role: "",
-      region: "",
+      region:
+        currentUserRole === "GES_REGIONAL_OFFICER" ? currentUserRegionId : "",
       district: "",
-      community: "",
       status: "active",
     },
   });
-// check the selected region
+  // check the selected region
   const selectedRegion = watch("region");
-  const { data: districts, isLoading: districtsLoading } =
-    useDistricts(selectedRegion, currentUserRole, currentUserRegionId);
-
-  console.log("region", regions);
+  const { data: districts, isLoading: districtsLoading } = useDistricts(
+    selectedRegion,
+    currentUserRole,
+    currentUserRegionId
+  );
 
   // Ensure component is mounted on client before running effects
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Reset form when modal opens/closes or when editing user changes
   useEffect(() => {
     if (!mounted) return; // Don't run during SSR
 
@@ -142,17 +123,27 @@ export default function UserModal({
       if (editingUser) {
         // Edit mode - populate form with user data
         reset({
-          fullName: editingUser.name || editingUser.fullName || "",
+          fullName:
+            editingUser.profile?.full_name ||
+            editingUser.name ||
+            editingUser.fullName ||
+            "",
           email: editingUser.email || "",
-          phone: editingUser.phone || "",
+          phone: editingUser.profile?.phone_number || editingUser.phone || "",
           role: editingUser.role || "",
-          region: editingUser.region || editingUser.assignedRegion?.id || "",
+          region:
+            editingUser.profile?.region ||
+            editingUser.region ||
+            editingUser.assignedRegion?.id ||
+            "",
           district:
-            editingUser.district || editingUser.assignedDistrict?.id || "",
-          community: editingUser.community || editingUser.assignedCommunity || null,
+            editingUser.profile?.district ||
+            editingUser.district ||
+            editingUser.assignedDistrict?.id ||
+            "",
           password: "",
           status:
-            editingUser.status || editingUser.isActive ? "active" : "inactive",
+            editingUser.status || editingUser.is_active ? "active" : "inactive",
         });
       } else {
         // Add mode - reset to default values
@@ -161,9 +152,12 @@ export default function UserModal({
           email: "",
           phone: "",
           role: "",
-          region: currentUserRole === "GES_REGIONAL_OFFICER" ? currentUserRegionId : "",
+          region:
+            currentUserRole === "GES_REGIONAL_OFFICER"
+              ? currentUserRegionId
+              : "",
           district: "",
-          community: null,
+
           password: "",
           status: "active",
         });
@@ -179,28 +173,32 @@ export default function UserModal({
   }, [selectedRegion, setValue, mounted]);
 
   const onSubmit = async (data) => {
-    try {
-      // Convert status string to boolean isActive
-      // const { status, ...rest } = data;
-      // const isActive = status === "active";
-      // const payload = { ...rest, isActive };
-      if (editingUser) {
-        // Update user
-        await updateUser(editingUser.id, data);
-      } else {
-        // Add user
-        await addUser(data);
-      }
+    console.log("form data", data);
 
-      // Call success callback if provided
+    // Transform to backend structure
+    const payload = {
+      email: data.email,
+      role: data.role.toLowerCase(),
+      profile: {
+        full_name: data.fullName,
+        phone_number: data.phone,
+        region: data.region,
+        district: data.district,
+      },
+      // Optionally add status or other fields if needed
+    };
+
+    try {
+      if (editingUser) {
+        await updateUser(editingUser.id, payload);
+      } else {
+        await addUser(payload);
+      }
       if (onSuccess) {
         onSuccess(data, editingUser ? "update" : "add");
       }
-
-      // Close modal
       onOpenChange(false);
     } catch (error) {
-      // Error handling is done in the hook
       console.error("Form submission error:", error);
     }
   };
@@ -214,17 +212,24 @@ export default function UserModal({
 
   // Get available roles based on current user's role
   const getAvailableRoles = () => {
-    if (currentUserRole === "ADMIN") {
-      return ["ADMIN", "GES_REGIONAL_OFFICER", "GES_DISTRICT_OFFICER", "REPORTER"];
-    } else if (currentUserRole === "GES_REGIONAL_OFFICER") {
-      return ["GES_DISTRICT_OFFICER", "REPORTER"];
-    } else if (currentUserRole === "GES_DISTRICT_OFFICER") {
-      return ["REPORTER"];
+    const role = (currentUserRole || "").toLowerCase();
+    if (role === "admin") {
+      return ROLES;
+    } else if (role === "regional_officer") {
+      return ["district_officer", "reporter"];
+    } else if (role === "district_officer") {
+      return ["reporter"];
     }
     return [];
   };
 
   const availableRoles = getAvailableRoles();
+  // console.log(
+  //   "currentUserRole:",
+  //   currentUserRole,
+  //   "availableRoles:",
+  //   availableRoles
+  // );
 
   // Don't render form content until mounted to prevent hydration mismatch
   if (!mounted) {
@@ -249,6 +254,8 @@ export default function UserModal({
     );
   }
 
+  console.log("Form errors:", errors);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -262,7 +269,13 @@ export default function UserModal({
               : "Create a new user account with appropriate role and permissions"}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
+        <form
+          onSubmit={handleSubmit((data) => {
+            console.log("Form submitted with data:", data);
+            onSubmit(data);
+          })}
+          className="space-y-4 py-4"
+        >
           {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -274,7 +287,9 @@ export default function UserModal({
                 disabled={isLoading}
               />
               {errors.fullName && (
-                <p className="text-sm text-red-500">{errors.fullName.message}</p>
+                <p className="text-sm text-red-500">
+                  {errors.fullName.message}
+                </p>
               )}
             </div>
             <div className="space-y-2">
@@ -321,10 +336,10 @@ export default function UserModal({
                     <SelectContent>
                       {availableRoles.map((role) => {
                         const roleLabels = {
-                          ADMIN: "Admin",
-                          GES_REGIONAL_OFFICER: "Regional Officer",
-                          GES_DISTRICT_OFFICER: "District Officer",
-                          REPORTER: "Field Reporter"
+                          admin: "Admin",
+                          regional_officer: "Regional Officer",
+                          district_officer: "District Officer",
+                          reporter: "Field Reporter",
                         };
                         return (
                           <SelectItem key={role} value={role}>
@@ -342,7 +357,9 @@ export default function UserModal({
             </div>
           </div>
           {/* Location Assignment */}
-          {(role === "GES_REGIONAL_OFFICER" || role === "GES_DISTRICT_OFFICER" || role === "REPORTER") && (
+          {(role === ROLES[1] ||
+            role === ROLES[2] ||
+            role === ROLES[3]) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="region">Region *</Label>
@@ -387,7 +404,7 @@ export default function UserModal({
                   </p>
                 )}
               </div>
-              {(role === "GES_DISTRICT_OFFICER" || role === "REPORTER") && (
+              {(role === ROLES[2] || role === ROLES[3]) && (
                 <div className="space-y-2">
                   <Label htmlFor="district">District *</Label>
                   <Controller
@@ -445,29 +462,7 @@ export default function UserModal({
               )}
             </div>
           )}
-          
-          {/* Community Field for REPORTER */}
-          {/* {role === "REPORTER" && (
-            <div className="space-y-2">
-              <Label htmlFor="community">Community *</Label>
-              <Controller
-                name="community"
-                control={control}
-                render={({ field }) => (
-                  <CommunityAutocomplete
-                    value={field.value}
-                    onChange={field.onChange}
-                    districtId={watch("district")}
-                    placeholder="Search or create community..."
-                    disabled={isLoading || !watch("district")}
-                  />
-                )}
-              />
-              {errors.community && (
-                <p className="text-sm text-red-500">{errors.community.message}</p>
-              )}
-            </div>
-          )} */}
+
           {/* Status */}
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
@@ -507,6 +502,7 @@ export default function UserModal({
               type="submit"
               className="bg-green-600 hover:bg-green-700"
               disabled={isLoading}
+              // onClick={() => console.log("Submit button clicked")}
             >
               {isLoading ? (
                 <>

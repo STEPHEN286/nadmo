@@ -4,10 +4,16 @@ import { toast } from "./use-toast.jsx";
 import { BASE_URL } from "@/lib/utils.js";
 import { useRouter } from "next/navigation.js";
 
+
 // Replace with your actual API endpoint
 
 const postReport = async (reportData) => {
-  const response = await axios.post(`${BASE_URL}/reports/`, reportData);
+  console.log("report", reportData)
+  const response = await axios.post(`${BASE_URL}/reports/`, reportData, 
+   { headers: {
+      'Content-Type': 'multipart/form-data'
+    }}
+  );
   return response.data;
 };
 

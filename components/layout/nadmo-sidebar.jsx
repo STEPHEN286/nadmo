@@ -62,7 +62,7 @@ const nadmoNavigation = [
       },
       {
         name: "Map View",
-        href: "/nadmo/map",
+        href: "/map",
         icon: MapPin,
         roles: ["ADMIN", "REPORTER", "view_only"],
         badge: null,

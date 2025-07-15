@@ -1,18 +1,14 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
+
 import { useToast } from "@/hooks/use-toast"
-import { useQuery } from "@tanstack/react-query"
-import axios from "axios"
-import { BASE_URL } from "@/lib/utils"
+
 import { 
   ExportPanel, 
   ReportTable, 
@@ -42,20 +38,22 @@ import Link from "next/link"
 import { mockReports, statusConfig, severityConfig, disasterTypes } from "@/lib/disaster-data"
 import { NadmoLayout } from "@/components/layout/nadmo-layout"
 import { exportReports, getAvailableFields } from "@/lib/export-utils"
+import useReports from "@/hooks/use-reports"
 
-// Hook to fetch all reports
-const useAllReports = () => {
-  return useQuery({
-    queryKey: ["all-reports"],
-    queryFn: async () => {
-      const response = await axios.get(`${BASE_URL}/reports/`);
-      return response.data;
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-};
+// Remove useAllReports and related fetch logic
+// const useAllReports = () => {
+//   return useQuery({
+//     queryKey: ["all-reports"],
+//     queryFn: async () => {
+//       const response = await axios.get(`${BASE_URL}/reports/`);
+//       return response.data;
+//     },
+//     staleTime: 5 * 60 * 1000, // 5 minutes
+//   });
+// };
 
 export default function NADMOReportsPage() {
+  // All hooks at the top
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
@@ -69,11 +67,13 @@ export default function NADMOReportsPage() {
   const [isUpdating, setIsUpdating] = useState(false)
   const [showExportPanel, setShowExportPanel] = useState(false)
   const [exportFormat, setExportFormat] = useState("csv")
-  
-  // Fetch reports from API
-  const { data: reportsData, isLoading, error, refetch } = useAllReports();
-  const reports = reportsData?.results || [];
-  
+
+  const { reports, isPending, error, count, next, previous, refetch } = useReports(currentPage);
+  const pageSize = 20;
+  const totalPages = Math.ceil(count / pageSize) || 1;
+
+ 
+
   // Get available fields for NADMO reports
   const availableFields = getAvailableFields('nadmo');
   
@@ -101,67 +101,11 @@ export default function NADMOReportsPage() {
   ]
 
   // Filter and search reports
-  const filteredReports = useMemo(() => {
-    const filtered = reports.filter((report) => {
-      const matchesSearch =
-        report.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.location_description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.disaster_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (report.reporter && report.reporter.email?.toLowerCase().includes(searchTerm.toLowerCase()))
-
-      const matchesStatus = statusFilter === "all" || report.status === statusFilter
-      const matchesType = typeFilter === "all" || report.disaster_type === typeFilter
-      const matchesSeverity = severityFilter === "all" || report.severity_level === severityFilter
-      const matchesRegion = regionFilter === "all" || report.location_description?.includes(regionFilter)
-
-      let matchesDate = true
-      if (dateFilter !== "all") {
-        const reportDate = new Date(report.created_at)
-        const now = new Date()
-        const diffTime = Math.abs(now - reportDate)
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-        switch (dateFilter) {
-          case "today":
-            matchesDate = diffDays <= 1
-            break
-          case "week":
-            matchesDate = diffDays <= 7
-            break
-          case "month":
-            matchesDate = diffDays <= 30
-            break
-          case "quarter":
-            matchesDate = diffDays <= 90
-            break
-        }
-      }
-
-      return matchesSearch && matchesStatus && matchesType && matchesSeverity && matchesRegion && matchesDate
-    })
-
-    // Sort reports
-    filtered.sort((a, b) => {
-      let aValue = a[sortField]
-      let bValue = b[sortField]
-
-      if (sortField === "created_at" || sortField === "updated_at") {
-        aValue = new Date(aValue)
-        bValue = new Date(bValue)
-      }
-
-      if (sortDirection === "asc") {
-        return aValue > bValue ? 1 : -1
-      } else {
-        return aValue < bValue ? 1 : -1
-      }
-    })
-
-    return filtered
-  }, [reports, searchTerm, statusFilter, typeFilter, severityFilter, regionFilter, dateFilter, sortField, sortDirection])
+  console.log("reports from useReports hook:", reports);
+  const filteredReports = reports;
 
   // Show loading state
-  if (isLoading) {
+  if (isPending) {
     return (
       <NadmoLayout>
         <div className="flex items-center justify-center h-64">
@@ -188,7 +132,14 @@ export default function NADMOReportsPage() {
   }
 
   // Pagination
-  const totalPages = Math.ceil(filteredReports.length / itemsPerPage)
+  // const pageSize = reports.length || 1;
+  // const totalPages = Math.ceil(count / pageSize) || 1;
+
+  // useEffect(() => {
+  //   if (currentPage > totalPages) {
+  //     setCurrentPage(totalPages);
+  //   }
+  // }, [totalPages, currentPage]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -245,11 +196,11 @@ export default function NADMOReportsPage() {
       }));
 
       // Export the reports
-      await exportReports(filteredReports, exportFields, format, 'nadmo_reports');
+      await exportReports(reports, exportFields, format, 'nadmo_reports');
 
       toast({
         title: "Export Completed",
-        description: `Successfully exported ${filteredReports.length} reports as ${format.toUpperCase()}`,
+        description: `Successfully exported ${reports.length} reports as ${format.toUpperCase()}`,
         className: "bg-green-50 border-green-200 text-green-800",
       });
     } catch (error) {
@@ -423,7 +374,7 @@ export default function NADMOReportsPage() {
   const statsData = [
     {
       label: "Total Reports",
-      value: reports.length.toString(),
+      value: count.toString(),
       icon: FileText,
       iconColor: "text-blue-600",
       iconBgColor: "bg-blue-50",
@@ -561,7 +512,7 @@ export default function NADMOReportsPage() {
         {/* Export Panel */}
         {showExportPanel && (
           <ExportPanel
-            filteredReports={filteredReports}
+            filteredReports={reports}
             onExport={handleExport}
             isUpdating={isUpdating}
             onCancel={() => setShowExportPanel(false)}
@@ -589,7 +540,7 @@ export default function NADMOReportsPage() {
         <ReportTable
           title="Emergency Reports"
           description="Comprehensive list of all disaster reports with management actions"
-          data={filteredReports}
+          data={reports}
           columns={tableColumns}
           selectedItems={selectedReports}
           onSelectItem={handleSelectReport}
@@ -600,8 +551,10 @@ export default function NADMOReportsPage() {
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
-          itemsPerPage={itemsPerPage}
-          totalItems={reports.length}
+          itemsPerPage={pageSize}
+          totalItems={count}
+          next={next}
+          previous={previous}
           // showSelection={true}
           showPagination={true}
           showBulkActions={true}

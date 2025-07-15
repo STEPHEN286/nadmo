@@ -45,6 +45,8 @@ const reportSchema = z.object({
   number_injured: z.string().optional(),
   are_people_hurt: z.boolean(),
   photo: z.array(z.any()).optional(),
+  full_name: z.string().optional(),
+  phone_number: z.string().optional(),
 });
 
 export default function ReportDisasterPage() {
@@ -68,6 +70,8 @@ export default function ReportDisasterPage() {
       number_injured: "",
       are_people_hurt: false,
       photo: [],
+      full_name: "",
+      phone_number: ""
     },
   });
   const { handleSubmit, control, register, setValue, watch, formState: { errors } } = form;
@@ -252,7 +256,7 @@ export default function ReportDisasterPage() {
   }, [watchedImages]);
 
   const onSubmit = (data) => {
-    // console.log("Form data:", data);
+    console.log("Form data:", data);
     const payload = {
       disaster_type: data.disaster_type,
       location_description: data.location_description,
@@ -261,6 +265,9 @@ export default function ReportDisasterPage() {
       are_people_hurt: data.number_injured > 0,
       status: "pending",
       reporter: user? user?.id : null,
+      photo: data.photo,
+      full_name: data.full_name ? data.full_name : null,
+      phone_number: data.phone_number
       // photo: data.photo,
     };
 
@@ -618,7 +625,7 @@ export default function ReportDisasterPage() {
 
 
 {/* Full Name */}
-<div className="grid grid-cols-2 gap-3">
+{!user && <div className="grid grid-cols-2 gap-3">
   <FormField
                     control={control}
                     name="full_name"
@@ -626,7 +633,7 @@ export default function ReportDisasterPage() {
                       <FormItem>
                         <FormLabel>Full Name</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Enter your full name" disabled />
+                          <Input {...field} placeholder="Enter your full name"  />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -640,13 +647,13 @@ export default function ReportDisasterPage() {
                       <FormItem>
                         <FormLabel>Phone Number</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Enter your phone number" disabled />
+                          <Input {...field} placeholder="Enter your phone number"  />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-</div>
+</div>}
                 {/* Report Summary */}
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="font-medium text-gray-900 mb-3">Report Summary</h3>

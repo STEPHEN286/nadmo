@@ -28,14 +28,17 @@ import { Users, UserPlus, Edit, Trash2, Search, Shield, Mail, Phone, MapPin, Key
 import {useUsers} from "@/hooks/use-users"
 // import {useRegions} from "@/hooks/use-regions"
 import UserModal from "@/components/user-modal"
+import { ROLES } from "@/lib/constants"
 
 
 export default function UserManagementPage() {
-  const { user, system } = useAuth()
-  const { isPending, users, error } = useUsers(system)
+  const [page, setPage] = useState(1);
+  const { user} = useAuth()
+  const { isPending, users, error, count, next, previous } = useUsers(page)
   const deleteUserMutation = useDeleteUser()
+  
 
-  console.log("user", users)
+  // console.log("user", users)
 
   const [searchTerm, setSearchTerm] = useState("")
   const [filterRole, setFilterRole] = useState("all")
@@ -57,7 +60,7 @@ export default function UserManagementPage() {
   }
 
   // Check if current user has permission to access user management
-  const canAccessUserManagement = ["admin", "GES_REGIONAL_OFFICER", "GES_DISTRICT_OFFICER"].includes(user?.role)
+  const canAccessUserManagement = ["admin", "regional_officer", "district_officer"].includes((user?.role || "").toLowerCase())
   
   if (!canAccessUserManagement) {
     return (
@@ -89,21 +92,23 @@ export default function UserManagementPage() {
 
     // Role-based access control
     let hasAccess = true
-    
-    if (user?.role === "GES_REGIONAL_OFFICER") {
+    const userRole = (user?.role || "").toLowerCase();
+    const itemRole = (userItem.role || "").toLowerCase();
+
+    if (userRole === "regional_officer") {
       // Regional Officer can see district officers and reporters in their assigned region
       hasAccess = userItem.profile?.region === user.profile?.region && 
-                  (userItem.role === "GES_DISTRICT_OFFICER" || userItem.role === "reporter")
+                  (itemRole === "district_officer" || itemRole === "reporter")
     }
-    else if (user?.role === "GES_DISTRICT_OFFICER") {
+    else if (userRole === "district_officer") {
       // District Officer can only see reporters in their assigned district
       hasAccess = userItem.profile?.district === user.profile?.district && 
-                  userItem.role === "reporter"
+                  itemRole === "reporter"
     }
     // Admin can see all users except other admins (for deletion purposes)
-    else if (user?.role === "admin") {
+    else if (userRole === "admin") {
       // Show all users except other admins in the delete context
-      hasAccess = userItem.role !== "admin" || userItem.id === user.id
+      hasAccess = itemRole !== "admin" || userItem.id === user.id
     }
 
     return matchesSearch && matchesRole && matchesStatus && hasAccess
@@ -156,20 +161,20 @@ export default function UserManagementPage() {
     }
 
     // Regional Officer can delete district officers and reporters in their region
-    if (user?.role === "GES_REGIONAL_OFFICER") {
+    if (user?.role === "regional_officer") {
       // Can only delete users in their assigned region
       if (targetUser.profile?.region !== user.profile?.region) {
         return false
       }
       // Can only delete district officers and reporters
-      if (targetUser.role !== "GES_DISTRICT_OFFICER" && targetUser.role !== "reporter") {
+      if (targetUser.role !== "district_officer" && targetUser.role !== "reporter") {
         return false
       }
       return true
     }
 
     // District Officer can delete reporters in their district
-    if (user?.role === "GES_DISTRICT_OFFICER") {
+    if (user?.role === "district_officer") {
       // Can only delete users in their assigned district
       if (targetUser.profile?.district !== user.profile?.district) {
         return false
@@ -196,15 +201,15 @@ export default function UserManagementPage() {
   const getRoleBadge = (role) => {
     const variants = {
       admin: "default",
-      GES_REGIONAL_OFFICER: "secondary",
-      GES_DISTRICT_OFFICER: "outline",
+      regional_officer: "secondary",
+      district_officer: "outline",
       reporter: "destructive",
     }
 
     const labels = {
       admin: "Admin",
-      GES_REGIONAL_OFFICER: "Regional Officer",
-      GES_DISTRICT_OFFICER: "District Officer",
+      regional_officer: "Regional Officer",
+      district_officer: "District Officer",
       reporter: "Field Reporter",
     }
 
@@ -218,6 +223,11 @@ export default function UserManagementPage() {
       </Badge>
     )
   }
+
+  // Pagination controls
+  const pageSize = users.length || 1;
+  const totalPages = Math.ceil(count / pageSize) || 1;
+ 
 
   return (
     <NadmoLayout>
@@ -245,7 +255,7 @@ export default function UserManagementPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{filteredUsers?.length || 0}</p>
+                  <p className="text-2xl font-bold text-gray-900">{count || 0}</p>
                 </div>
                 <Users className="h-8 w-8 text-blue-600" />
               </div>
@@ -315,10 +325,11 @@ export default function UserManagementPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="GES_REGIONAL_OFFICER">Regional Officer</SelectItem>
-                  <SelectItem value="GES_DISTRICT_OFFICER">District Officer</SelectItem>
-                  <SelectItem value="reporter">Field Reporter</SelectItem>
+                  {ROLES.map(role => (
+                    <SelectItem key={role} value={role}>
+                      {role.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -351,17 +362,15 @@ export default function UserManagementPage() {
                     <TableRow key={user.id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{user.profile?.full_name || user.name}</p>
+                          <p className="font-medium">{user.profile?.full_name }</p>
                           <div className="flex items-center text-sm text-gray-500">
                             <Mail className="h-3 w-3 mr-1" />
                             {user.email}
                           </div>
-                          {user.phone && (
-                            <div className="flex items-center text-sm text-gray-500">
-                              <Phone className="h-3 w-3 mr-1" />
-                              {user.phone}
-                            </div>
-                          )}
+                          <div className="flex items-center text-sm text-gray-500">
+                            <Phone className="h-3 w-3 mr-1" />
+                            {user.profile?.phone_number || user.phone || "N/A"}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>{getRoleBadge(user?.role)}</TableCell>
@@ -370,14 +379,13 @@ export default function UserManagementPage() {
                           {user.profile?.region && (
                             <div className="flex items-center">
                               <MapPin className="h-3 w-3 mr-1" />
-                              {user.profile?.region?.name}
+                              {user.profile?.region?.name || user.profile?.region || "N/A"}
                             </div>
                           )}
-                          {user.profile?.district && <div className="text-gray-500 ml-4">{user.profile?.district?.name}</div>}
-                          {user.role === "reporter" && user.assignedCommunity && (
-                            <div className="text-gray-500 ml-4">{user.assignedCommunity.name}</div>
+                          {user.profile?.district && (
+                            <div className="text-gray-500 ml-4">{user.profile?.district?.name || user.profile?.district || "N/A"}</div>
                           )}
-                          {!user.profile?.region?.name && !user.profile?.district?.name && <span className="text-gray-400">Global</span>}
+                          {!user.profile?.region && !user.profile?.district && <span className="text-gray-400">N/A</span>}
                         </div>
                       </TableCell>
                       <TableCell>{getStatusBadge(user.is_active)}</TableCell>
@@ -406,6 +414,26 @@ export default function UserManagementPage() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+            {/* Pagination Controls */}
+            <div className="flex justify-between items-center mt-4">
+              <Button
+                variant="outline"
+                disabled={!previous || page === 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-gray-600">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                disabled={!next || page === totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
             </div>
 
             {filteredUsers.length === 0 && (
