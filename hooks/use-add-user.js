@@ -49,7 +49,7 @@ export function useAddUser() {
       toast({
         title: "Error adding user",
         description: error.message || "Something went wrong. Please try again.",
-        variant: "destructive",
+        className: "bg-red-600 text-white",
       });
     },
   });

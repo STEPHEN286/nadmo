@@ -15,4 +15,17 @@ export default function useUserReports(userId) {
     enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+}
+
+export function useViewReport(reportId) {
+  return useQuery({
+    queryKey: ["report", reportId],
+    queryFn: async () => {
+      if (!reportId) return null;
+      const response = await axios.get(`${BASE_URL}/reports/${reportId}/`);
+      return response.data;
+    },
+    enabled: !!reportId,
+    staleTime: 5 * 60 * 1000,
+  });
 } 

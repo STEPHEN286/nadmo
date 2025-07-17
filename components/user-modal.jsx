@@ -182,8 +182,8 @@ export default function UserModal({
       profile: {
         full_name: data.fullName,
         phone_number: data.phone,
-        region: data.region,
-        district: data.district,
+        region: data.region || "",
+        district: data.district || "",
       },
       // Optionally add status or other fields if needed
     };

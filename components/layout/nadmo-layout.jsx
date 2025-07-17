@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { NadmoSidebar } from "./nadmo-sidebar"
 import { Header } from "./header"
@@ -9,6 +9,11 @@ import { useAuth } from "@/hooks/use-auth"
 export function NadmoLayout({ children }) {
   const { user, mounted } = useAuth();
   const router = useRouter();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     if (mounted && !user) {
@@ -16,7 +21,8 @@ export function NadmoLayout({ children }) {
     }
   }, [user, mounted, router]);
 
-  if (!mounted) {
+  // Only render on client
+  if (typeof window === "undefined" || !isClient || !mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>

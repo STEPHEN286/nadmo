@@ -46,7 +46,7 @@ export function ReportFilters({
             <SelectContent>
               {filter.options.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
-                  {option.icon && <span className="mr-2">{option.icon}</span>}
+                  {/* {option.icon && <span className="mr-2">{option.icon}</span>} */}
                   {option.label}
                 </SelectItem>
               ))}

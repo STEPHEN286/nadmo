@@ -29,6 +29,7 @@ import {useUsers} from "@/hooks/use-users"
 // import {useRegions} from "@/hooks/use-regions"
 import UserModal from "@/components/user-modal"
 import { ROLES } from "@/lib/constants"
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 
 export default function UserManagementPage() {
@@ -458,27 +459,25 @@ export default function UserManagementPage() {
         currentUserRegionId={user?.profile?.region?.id}
         currentUserDistrictId={user?.profile?.district?.id}
       />
-
       {/* Delete Dialog */}
-      <AlertDialog open={deleteDialog.open} onOpenChange={cancelDelete}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{deleteDialog.user?.profile?.full_name || deleteDialog.user?.name}</strong>? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => {
+          setDeleteDialog({ open, user: open ? deleteDialog.user : null });
+        }}
+        title="Delete User"
+        description={`Are you sure you want to delete ${deleteDialog.user?.profile?.full_name || deleteDialog.user?.name}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        destructive
+        loading={deleteUserMutation.isPending}
+        onConfirm={confirmDelete}
+      >
+        <div className="py-2 text-sm text-gray-700">
+          <strong>Email:</strong> {deleteDialog.user?.email}<br />
+          <strong>Role:</strong> {deleteDialog.user?.role}
+        </div>
+      </ConfirmDialog>
     </NadmoLayout>
   )
 }

@@ -7,7 +7,7 @@ export function ReportStats({
   className = "",
 }) {
   return (
-    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 ${className}`}>
+    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 ${className}`}>
       {stats.map((stat, index) => (
         <Card key={index}>
           <CardContent className="p-4">

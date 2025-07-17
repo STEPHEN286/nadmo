@@ -33,24 +33,21 @@ import {
   SortAsc,
   SortDesc,
   TableIcon,
+  LoaderIcon,
+  Trash2,
 } from "lucide-react"
 import Link from "next/link"
 import { mockReports, statusConfig, severityConfig, disasterTypes } from "@/lib/disaster-data"
 import { NadmoLayout } from "@/components/layout/nadmo-layout"
 import { exportReports, getAvailableFields } from "@/lib/export-utils"
-import useReports from "@/hooks/use-reports"
+import useReports, { useUpdateReportStatus } from "@/hooks/use-reports"
+import axios from "axios";
+import { BASE_URL } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
+import StatusUpdateModal from "@/components/StatusUpdateModal";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useDeleteReport } from "@/hooks/use-delete-report";
 
-// Remove useAllReports and related fetch logic
-// const useAllReports = () => {
-//   return useQuery({
-//     queryKey: ["all-reports"],
-//     queryFn: async () => {
-//       const response = await axios.get(`${BASE_URL}/reports/`);
-//       return response.data;
-//     },
-//     staleTime: 5 * 60 * 1000, // 5 minutes
-//   });
-// };
 
 export default function NADMOReportsPage() {
   // All hooks at the top
@@ -67,9 +64,17 @@ export default function NADMOReportsPage() {
   const [isUpdating, setIsUpdating] = useState(false)
   const [showExportPanel, setShowExportPanel] = useState(false)
   const [exportFormat, setExportFormat] = useState("csv")
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingReport, setEditingReport] = useState(null);
+  const [newStatus, setNewStatus] = useState("");
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletingReport, setDeletingReport] = useState(null);
+  const deleteReportMutation = useDeleteReport();
 
   const { reports, isPending, error, count, next, previous, refetch } = useReports(currentPage);
-  const pageSize = 20;
+  
+
+  const pageSize = 10;
   const totalPages = Math.ceil(count / pageSize) || 1;
 
  
@@ -87,18 +92,7 @@ export default function NADMOReportsPage() {
   const itemsPerPage = 15
   const { toast } = useToast()
 
-  const regions = [
-    "Greater Accra",
-    "Ashanti",
-    "Western",
-    "Eastern",
-    "Northern",
-    "Central",
-    "Upper East",
-    "Upper West",
-    "Volta",
-    "Brong Ahafo",
-  ]
+
 
   // Filter and search reports
   console.log("reports from useReports hook:", reports);
@@ -241,15 +235,7 @@ export default function NADMOReportsPage() {
     }
   }
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
+  
 
   const getDisasterTypeInfo = (type) => {
     return disasterTypes.find((t) => t.value === type) || { label: type, icon: "⚠️" }
@@ -257,12 +243,12 @@ export default function NADMOReportsPage() {
 
   // Table columns configuration
   const tableColumns = [
-    {
-      key: "id",
-      label: "Report ID",
-      type: "id",
-      sortable: true,
-    },
+    // {
+    //   key: "id",
+    //   label: "Report ID",
+    //   type: "id",
+    //   sortable: true,
+    // },
     {
       key: "disaster_type",
       label: "Type",
@@ -283,17 +269,17 @@ export default function NADMOReportsPage() {
       type: "location",
       sortable: true,
     },
-    {
-      key: "reporter",
-      label: "Reporter",
-      type: "custom",
-      render: (item) => (
-        <div className="flex items-center space-x-2">
-          <User className="h-4 w-4 text-gray-400" />
-          <span>{item.reporter?.email || "Anonymous"}</span>
-        </div>
-      ),
-    },
+    // {
+    //   key: "reporter",
+    //   label: "Reporter",
+    //   type: "custom",
+    //   render: (item) => (
+    //     <div className="flex items-center space-x-2">
+    //       <User className="h-4 w-4 text-gray-400" />
+    //       <span>{item.reporter?.email || "Anonymous"}</span>
+    //     </div>
+    //   ),
+    // },
     {
       key: "severity_level",
       label: "Severity",
@@ -324,10 +310,21 @@ export default function NADMOReportsPage() {
     },
     {
       icon: Edit,
-      title: "Edit Report",
+      title: "Edit Status",
       onClick: (item) => {
-        // Handle edit action
-        console.log("Edit report:", item.id)
+        console.log("Edit clicked for report:", item);
+        setEditingReport(item);
+        setNewStatus(""); // Don't set initial status, let user select
+        setEditModalOpen(true);
+      },
+    },
+    {
+      icon: Trash2,
+      title: "Delete Report",
+      onClick: (item) => {
+        console.log("Delete clicked for report:", item);
+        setDeletingReport(item);
+        setDeleteModalOpen(true);
       },
     },
   ]
@@ -350,12 +347,12 @@ export default function NADMOReportsPage() {
 
   // Header actions configuration
   const headerActions = [
-    {
-      label: "Refresh",
-      icon: RefreshCw,
-      onClick: () => refetch(),
-      variant: "outline",
-    },
+    // {
+    //   label: "Refresh",
+    //   icon: RefreshCw,
+    //   onClick: () => refetch(),
+    //   variant: "outline",
+    // },
     {
       label: "Export Data",
       icon: Download,
@@ -365,7 +362,7 @@ export default function NADMOReportsPage() {
     {
       label: "Map View",
       icon: MapPin,
-      href: "/nadmo/map",
+      href: "/map",
       variant: "outline",
     },
   ]
@@ -403,6 +400,14 @@ export default function NADMOReportsPage() {
       iconBgColor: "bg-green-50",
       valueColor: "text-green-600",
     },
+    {
+      label: "Pending",
+      value: reports.filter((r) => r.status === "pending").length.toString(),
+      icon: LoaderIcon,
+      iconColor: "text-green-600",
+      iconBgColor: "bg-green-50",
+      valueColor: "text-green-600",
+    },
   ]
 
   // Filters configuration
@@ -420,10 +425,10 @@ export default function NADMOReportsPage() {
       value: statusFilter,
       options: [
         { value: "all", label: "All Statuses" },
-        { value: "new", label: "🔴 New", icon: "🔴" },
-        { value: "in_progress", label: "🟡 In Progress", icon: "🟡" },
-        { value: "resolved", label: "🟢 Resolved", icon: "🟢" },
-        { value: "fake", label: "⚫ Fake", icon: "⚫" },
+        { value: "new", label: " New", icon: "" },
+        { value: "in_progress", label: " In Progress", icon: "" },
+        { value: "resolved", label: " Resolved", icon: "" },
+        { value: "fake", label: " Fake", icon: "" },
       ],
     },
     {
@@ -447,22 +452,22 @@ export default function NADMOReportsPage() {
       value: severityFilter,
       options: [
         { value: "all", label: "All Severities" },
-        { value: "critical", label: "🔴 Critical", icon: "🔴" },
-        { value: "high", label: "🟠 High", icon: "🟠" },
-        { value: "medium", label: "🟡 Medium", icon: "🟡" },
-        { value: "low", label: "🟢 Low", icon: "🟢" },
+        { value: "critical", label: " Critical", icon: "" },
+        { value: "high", label: " High", icon: "" },
+        { value: "medium", label: " Medium", icon: "" },
+        { value: "low", label: " Low", icon: "" },
       ],
     },
-    {
-      key: "region",
-      type: "select",
-      placeholder: "Region",
-      value: regionFilter,
-      options: [
-        { value: "all", label: "All Regions" },
-        ...regions.map((region) => ({ value: region, label: region })),
-      ],
-    },
+    // {
+    //   key: "region",
+    //   type: "select",
+    //   placeholder: "Region",
+    //   value: regionFilter,
+    //   options: [
+    //     { value: "all", label: "All Regions" },
+    //     ...regions.map((region) => ({ value: region, label: region })),
+    //   ],
+    // },
     {
       key: "date",
       type: "date",
@@ -498,6 +503,9 @@ export default function NADMOReportsPage() {
     }
     setCurrentPage(1)
   }
+
+    // Status update handler
+ 
 
   return (
     <NadmoLayout>
@@ -564,6 +572,43 @@ export default function NADMOReportsPage() {
           emptyMessage="No reports found matching your criteria"
           rowActions={rowActions}
         />
+        {/* Status Edit Modal */}
+        <StatusUpdateModal
+          open={editModalOpen}
+          onClose={() => { setEditModalOpen(false); setEditingReport(null); setNewStatus(""); }}
+          reportId={editingReport?.id}
+          status={editingReport?.status}
+          page={currentPage}
+        />
+        {/* Confirm Delete Dialog */}
+        <ConfirmDialog
+          open={deleteModalOpen}
+          onOpenChange={(open) => {
+            setDeleteModalOpen(open);
+            if (!open) setDeletingReport(null);
+          }}
+          title="Delete Report"
+          description={`Are you sure you want to delete this report? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          destructive
+          loading={deleteReportMutation.isLoading}
+          onConfirm={() => {
+            if (deletingReport) {
+              deleteReportMutation.mutate(deletingReport.id, {
+                onSuccess: () => {
+                  setDeleteModalOpen(false);
+                  setDeletingReport(null);
+                },
+              });
+            }
+          }}
+        >
+          <div className="py-2 text-sm text-gray-700">
+            <strong>Type:</strong> {deletingReport?.disaster_type}<br />
+            <strong>Location:</strong> {deletingReport?.location_description}
+          </div>
+        </ConfirmDialog>
       </div>
     </NadmoLayout>
   )

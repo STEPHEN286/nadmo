@@ -184,8 +184,3 @@ import { ReportTable, ExportPanel, ReportFilters } from '@/components/report-con
 - `date`: Date range select
 
 ## Examples
-
-See the following files for complete usage examples:
-- `app/nadmo/reports/page.jsx` - NADMO reports with full functionality
-- `app/edu-track/schools/page.jsx` - Schools directory with simplified table
-- `app/edu-track/reports/page.jsx` - EduTrack reports with export panel 

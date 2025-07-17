@@ -37,6 +37,15 @@ import {
   FileText,
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/hooks/use-auth";
+import StatusUpdateModal from "@/components/StatusUpdateModal";
 
 // Hook to fetch individual report
 const useReport = (reportId) => {
@@ -72,8 +81,20 @@ const statusConfig = {
   pending: { label: "Pending", color: "bg-yellow-100 text-yellow-800", icon: Clock },
   in_progress: { label: "In Progress", color: "bg-blue-100 text-blue-800", icon: Activity },
   resolved: { label: "Resolved", color: "bg-green-100 text-green-800", icon: CheckCircle },
-  cancelled: { label: "Cancelled", color: "bg-gray-100 text-gray-800", icon: XCircle },
+  fake: { label: "Fake", color: "bg-gray-100 text-gray-800", icon: XCircle },
 }
+
+const reportSchema = z.object({
+  disaster_type: z.string().min(1, "Emergency type is required"),
+  location_description: z.string().min(1, "Location is required"),
+  gps_coordinates: z.string().optional(),
+  severity_level: z.string().min(1, "Severity level is required"),
+  number_injured: z.string().optional(),
+  are_people_hurt: z.boolean(),
+  photo: z.array(z.any()).optional(),
+  full_name: z.string().optional(),
+  phone_number: z.string().optional(),
+});
 
 export default function ReportViewPage() {
   const params = useParams()
@@ -82,13 +103,16 @@ export default function ReportViewPage() {
   const reportId = params.id
 
   const { data: report, isLoading, error } = useReport(reportId)
+  const { user } = useAuth();
+  const [editOpen, setEditOpen] = useState(false);
+  const [statusEditOpen, setStatusEditOpen] = useState(false);
 
   const getDisasterTypeInfo = (type) => {
     return disasterTypes.find((t) => t.value === type) || { label: type, icon: "⚠️", description: "Emergency situation" }
   }
 
   const getStatusBadge = (status) => {
-    const config = statusConfig[status] || statusConfig.pending
+    const config = statusConfig[status] 
     const Icon = config.icon
     return (
       <Badge className={config.color}>
@@ -119,23 +143,28 @@ export default function ReportViewPage() {
     })
   }
 
-  const handleStatusUpdate = async (newStatus) => {
-    try {
-      await axios.patch(`${BASE_URL}/reports/${reportId}/`, { status: newStatus })
-      toast({
-        title: "Status Updated",
-        description: `Report status updated to ${statusConfig[newStatus]?.label}`,
-      })
-      // Refetch the report to get updated data
-      window.location.reload()
-    } catch (error) {
-      toast({
-        title: "Update Failed",
-        description: "Failed to update report status",
-        variant: "destructive",
-      })
-    }
-  }
+
+
+  // Setup form for editing
+  const form = useForm({
+    resolver: zodResolver(reportSchema),
+    defaultValues: report ? {
+      disaster_type: report.disaster_type || "",
+      location_description: report.location_description || "",
+      gps_coordinates: report.gps_coordinates || "",
+      severity_level: report.severity_level || "",
+      number_injured: report.number_injured || "",
+      are_people_hurt: report.are_people_hurt || false,
+      photo: [], // Editing photos not implemented for now
+      full_name: report.full_name || "",
+      phone_number: report.phone_number || "",
+    } : {},
+    values: report ? undefined : {},
+  });
+  const { handleSubmit, control, register, setValue, watch, formState: { errors } } = form;
+
+ 
+
 
   if (isLoading) {
     return (
@@ -179,6 +208,10 @@ export default function ReportViewPage() {
 
   const disasterTypeInfo = getDisasterTypeInfo(report.disaster_type)
 
+  // Determine edit permissions
+  const isAdmin = user && user.role === "admin";
+  const isReporter = user && report && user.id === report.reporter?.id;
+
   return (
     <NadmoLayout>
       <div className="space-y-6">
@@ -195,15 +228,19 @@ export default function ReportViewPage() {
             </div>
           </div>
           <div className="flex items-center space-x-2">
-           
             <Button variant="outline" size="sm">
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
-            <Button variant="outline" size="sm">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
+            {/* Only show Edit if user is admin or the reporter */}
+            
+            {/* Show Edit Status for admin only */}
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => setStatusEditOpen(true)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Status
+              </Button>
+            )}
           </div>
         </div>
 
@@ -218,6 +255,10 @@ export default function ReportViewPage() {
                   <div>
                     <span className="text-xl">{disasterTypeInfo.label}</span>
                     <p className="text-sm text-gray-600">{disasterTypeInfo.description}</p>
+                    {/* Show custom description if disaster type is 'other' and description exists */}
+                    {report.disaster_type === "other" && report.description && (
+                      <p className="text-sm text-gray-800 mt-1 font-medium">Description: {report.description}</p>
+                    )}
                   </div>
                 </CardTitle>
               </CardHeader>
@@ -256,7 +297,7 @@ export default function ReportViewPage() {
                       {report.are_people_hurt ? (
                         <>
                           <Heart className="h-4 w-4 text-red-500" />
-                          <span className="text-red-600 font-medium">Yes - {report.number_injured} people injured</span>
+                          <span className="text-red-600 font-medium">Yes </span>
                         </>
                       ) : (
                         <>
@@ -367,68 +408,20 @@ export default function ReportViewPage() {
               </CardContent>
             </Card>
 
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => handleStatusUpdate("in_progress")}
-                  disabled={report.status === "in_progress"}
-                >
-                  <Activity className="h-4 w-4 mr-2" />
-                  Mark In Progress
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => handleStatusUpdate("resolved")}
-                  disabled={report.status === "resolved"}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Mark Resolved
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => handleStatusUpdate("cancelled")}
-                  disabled={report.status === "cancelled"}
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Cancel Report
-                </Button>
-              </CardContent>
-            </Card>
+           
 
-            {/* Report Metadata */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Report Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Report ID</span>
-                  <span className="text-sm font-mono">{report.id}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Created</span>
-                  <span className="text-sm">{formatDate(report.created_at)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Type</span>
-                  <span className="text-sm capitalize">{report.disaster_type}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Severity</span>
-                  <span className="text-sm capitalize">{report.severity_level}</span>
-                </div>
-              </CardContent>
-            </Card>
+          
+          
           </div>
         </div>
+     
+        <StatusUpdateModal
+          open={statusEditOpen}
+          onClose={() => setStatusEditOpen(false)}
+          reportId={reportId}
+          status={report.status}
+          page={1}
+        />
       </div>
     </NadmoLayout>
   )

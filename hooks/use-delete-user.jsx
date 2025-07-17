@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import axios from 'axios';
+import { BASE_URL } from '@/lib/utils';
 
 export const useDeleteUser = () => {
   const { toast } = useToast();
@@ -8,7 +9,7 @@ export const useDeleteUser = () => {
 
   return useMutation({
     mutationFn: async (userId) => {
-      const { data } = await axios.delete(`/api/users/${userId}/`);
+      const { data } = await axios.delete(`${BASE_URL}/users/${userId}/`);
       return data;
     },
     onSuccess: (data) => {

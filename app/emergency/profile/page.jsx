@@ -35,6 +35,26 @@ import { AlertTriangle, MapPin, Clock, User as UserIcon, Shield } from "lucide-r
 import { severityConfig } from "@/lib/disaster-data";
 import { useQuery } from "@tanstack/react-query";
 import { BASE_URL } from "@/lib/utils";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { disasterTypes } from "@/lib/disaster-data";
+import axios from "axios";
+import { DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { toast } from "@/components/ui/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage
+} from "@/components/ui/form";
+import Link from "next/link";
+import ReporterViewReportModalContent from "@/components/ReporterViewReportModalContent";
 
 // Move this hook to the top-level so it is accessible everywhere in the file
 function useReporterViewReport(id) {
@@ -50,6 +70,19 @@ function useReporterViewReport(id) {
   });
 }
 
+// Add reportSchema for editing
+const reportSchema = z.object({
+  disaster_type: z.string().min(1, "Emergency type is required"),
+  location_description: z.string().min(1, "Location is required"),
+  gps_coordinates: z.string().optional(),
+  severity_level: z.string().min(1, "Severity level is required"),
+  number_injured: z.string().optional(),
+  are_people_hurt: z.boolean(),
+  photo: z.array(z.any()).optional(),
+  full_name: z.string().optional(),
+  phone_number: z.string().optional(),
+});
+
 export default function ProfilePage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -64,7 +97,7 @@ export default function ProfilePage() {
   const [modalOpen, setModalOpen] = useState(false);
 
   // Use the hook to fetch user reports
-  const { data: reports = [], isLoading: reportsLoading, error: reportsError } = useUserReports(user?.id)
+  const { data: reports = [], isLoading: reportsLoading, error: reportsError, refetch } = useUserReports(user?.id)
 
   // console.log("ProfilePage: Component rendered, user:", user, "mounted:", mounted)
 
@@ -100,6 +133,17 @@ export default function ProfilePage() {
       })
     }
   }, [reportsError, toast])
+
+  // Refetch reports on global report update event
+  useEffect(() => {
+    const handleReportUpdated = () => {
+      refetch();
+    };
+    window.addEventListener('report:updated', handleReportUpdated);
+    return () => {
+      window.removeEventListener('report:updated', handleReportUpdated);
+    };
+  }, [refetch]);
 
   const handleEditProfile = () => {
     setIsEditing(true)
@@ -323,61 +367,77 @@ export default function ProfilePage() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {reports.map((report) => (
-                          <Card key={report.id} className="border-l-4 border-l-red-500">
-                            <CardContent className="p-4">
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-start space-x-3">
-                                  <div className="text-2xl">
-                                    {getDisasterIcon(report.disaster_type)}
+                        {reports.map((report) => {
+                          const isReporter = user && report && user.id === report.reporter?.id;
+                          const canEdit = isReporter && report.status === "pending";
+                          return (
+                            <Card key={report.id} className="border-l-4 border-l-red-500">
+                              <CardContent className="p-4">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex items-start space-x-3">
+                                    <div className="text-2xl">
+                                      {getDisasterIcon(report.disaster_type)}
+                                    </div>
+                                    <div className="space-y-1">
+                                      <div className="flex items-center space-x-2">
+                                        <h3 className="font-medium text-gray-900">
+                                          {report.disaster_type.charAt(0).toUpperCase() + report.disaster_type.slice(1)}
+                                        </h3>
+                                        {getStatusBadge(report.status)}
+                                      </div>
+                                      <p className="text-sm text-gray-600">
+                                        {report.location_description}
+                                      </p>
+                                      <div className="flex items-center space-x-4 text-xs text-gray-500">
+                                        <span className="flex items-center space-x-1">
+                                          <Calendar className="h-3 w-3" />
+                                          <span>
+                                            {new Date(report.created_at).toLocaleDateString()}
+                                          </span>
+                                        </span>
+                                        <span className="flex items-center space-x-1">
+                                          <Clock className="h-3 w-3" />
+                                          <span>
+                                            {new Date(report.created_at).toLocaleTimeString()}
+                                          </span>
+                                        </span>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div className="space-y-1">
-                                    <div className="flex items-center space-x-2">
-                                      <h3 className="font-medium text-gray-900">
-                                        {report.disaster_type.charAt(0).toUpperCase() + report.disaster_type.slice(1)}
-                                      </h3>
-                                      {getStatusBadge(report.status)}
-                                    </div>
-                                    <p className="text-sm text-gray-600">
-                                      {report.location_description}
-                                    </p>
-                                    <div className="flex items-center space-x-4 text-xs text-gray-500">
-                                      <span className="flex items-center space-x-1">
-                                        <Calendar className="h-3 w-3" />
-                                        <span>
-                                          {new Date(report.created_at).toLocaleDateString()}
-                                        </span>
-                                      </span>
-                                      <span className="flex items-center space-x-1">
-                                        <Clock className="h-3 w-3" />
-                                        <span>
-                                          {new Date(report.created_at).toLocaleTimeString()}
-                                        </span>
-                                      </span>
-                                    </div>
+                                  <div className="flex space-x-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        if (user.role?.toLowerCase() === "reporter") {
+                                          setViewReportId(report.id);
+                                          setModalOpen(true);
+                                        } else {
+                                          router.push(`/reports/${report.id}`);
+                                        }
+                                      }}
+                                    >
+                                      <Eye className="h-4 w-4 mr-1" />
+                                      View
+                                    </Button>
+                                    {canEdit && (
+                                      <Button
+                                        asChild
+                                        variant="outline"
+                                        size="sm"
+                                      >
+                                        <Link href={`/emergency/reports/${report.id}`}>
+                                          <Edit className="h-4 w-4 mr-1" />
+                                          Edit
+                                        </Link>
+                                      </Button>
+                                    )}
                                   </div>
                                 </div>
-                                <div className="flex space-x-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      if (user.role?.toLowerCase() === "reporter") {
-                                        setViewReportId(report.id);
-                                        setModalOpen(true);
-                                      } else {
-                                        router.push(`/reports/${report.id}`);
-                                      }
-                                    }}
-                                  >
-                                    <Eye className="h-4 w-4 mr-1" />
-                                    View
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
                       </div>
                     )}
                   </CardContent>
@@ -519,91 +579,4 @@ export default function ProfilePage() {
       )}
     </div>
   )
-} 
-
-// Modal content component
-function ReporterViewReportModalContent({ reportId }) {
-  const { data: report, isLoading, error } = useReporterViewReport(reportId);
-  const statusConfig = {
-    pending: {
-      label: "Pending",
-      bgColor: "bg-blue-50",
-      textColor: "text-blue-700",
-      borderColor: "border-blue-200",
-    },
-    in_progress: {
-      label: "In Progress",
-      bgColor: "bg-yellow-50",
-      textColor: "text-yellow-700",
-      borderColor: "border-yellow-200",
-    },
-    resolved: {
-      label: "Resolved",
-      bgColor: "bg-green-50",
-      textColor: "text-green-700",
-      borderColor: "border-green-200",
-    },
-    fake: {
-      label: "Fake",
-      bgColor: "bg-gray-50",
-      textColor: "text-gray-700",
-      borderColor: "border-gray-200",
-    },
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[200px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600" />
-        <span className="ml-2 text-gray-600">Loading...</span>
-      </div>
-    );
-  }
-  if (error || !report) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[200px] text-center">
-        <AlertTriangle className="h-8 w-8 text-red-400 mb-2" />
-        <h3 className="text-base font-medium text-gray-900 mb-1">Report Not Found</h3>
-        <p className="text-gray-600 mb-2 text-sm">Unable to load this report. Please check the link or try again.</p>
-      </div>
-    );
-  }
-  const status = report.status;
-  const statusCfg = statusConfig[status] || {};
-  const severity = report.severity_level;
-  const severityCfg = severityConfig[severity] || {};
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-2">
-        <span className={`px-2 py-1 rounded text-xs font-semibold ${statusCfg.bgColor || "bg-gray-100"} ${statusCfg.textColor || "text-gray-700"} ${statusCfg.borderColor || "border-gray-200"}`}>{statusCfg.label || status}</span>
-        <span className="text-xs text-gray-500">ID: {report.id}</span>
-      </div>
-      <div className="flex items-center space-x-2">
-        <Clock className="h-4 w-4 text-gray-500" />
-        <span className="text-sm text-gray-600">{new Date(report.created_at).toLocaleString("en-GB")}</span>
-      </div>
-      <div className="flex items-center space-x-2">
-        <MapPin className="h-4 w-4 text-gray-500" />
-        <span className="text-sm text-gray-600">{report.location_description}</span>
-      </div>
-      <div className="flex items-center space-x-2">
-        <AlertTriangle className="h-4 w-4 text-gray-500" />
-        <span className={`px-2 py-1 rounded text-xs font-semibold ${severityCfg.bgColor || "bg-gray-100"} ${severityCfg.textColor || "text-gray-700"}`}>{severityCfg.label || severity}</span>
-      </div>
-      <div>
-        <h4 className="font-medium mb-1">Description</h4>
-        <p className="text-gray-700 text-sm">{report.description || <span className="italic text-gray-400">No description provided.</span>}</p>
-      </div>
-      <div className="flex items-center space-x-2 mt-2">
-        <UserIcon className="h-4 w-4 text-gray-500" />
-        <span className="text-sm">Reported by: {report.reporter?.email || "Anonymous"}</span>
-      </div>
-      {report.reporter?.profile?.phone_number && (
-        <div className="flex items-center space-x-2 mt-1">
-          <Shield className="h-4 w-4 text-gray-500" />
-          <span className="text-sm">Phone: {report.reporter.profile.phone_number}</span>
-        </div>
-      )}
-    </div>
-  );
 } 
