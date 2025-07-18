@@ -8,24 +8,36 @@ import { useAuth } from "@/hooks/use-auth";
 
 // console.log("BASE_URL", BASE_URL);
 
-const fetchReports = async (page = 1) => {
+const fetchReports = async (page = 1, filters = {}) => {
   try {
-    const response = await axios.get(`${BASE_URL}/reports/?page=${page}`);
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    
+    // Add filter parameters
+    if (filters.search) params.append('search', filters.search);
+    if (filters.status && filters.status !== 'all') params.append('status', filters.status);
+    if (filters.type && filters.type !== 'all') params.append('disaster_type', filters.type);
+    if (filters.severity && filters.severity !== 'all') params.append('severity_level', filters.severity);
+    if (filters.region && filters.region !== 'all') params.append('region', filters.region);
+    if (filters.date && filters.date !== 'all') params.append('date_filter', filters.date);
+    if (filters.sortField) params.append('ordering', filters.sortDirection === 'desc' ? `-${filters.sortField}` : filters.sortField);
+    
+    const response = await axios.get(`${BASE_URL}/reports/?${params.toString()}`);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.error || error.message);
   }
 };
 
-export default function useReports(page = 1) {
+export default function useReports(page = 1, filters = {}) {
   const {
     data,
     isPending,
     error,
     refetch,
   } = useQuery({
-    queryKey: ["reports", page],
-    queryFn: () => fetchReports(page),
+    queryKey: ["reports", page, filters],
+    queryFn: () => fetchReports(page, filters),
     staleTime: 0, // Always consider data stale to ensure fresh data
   });
 

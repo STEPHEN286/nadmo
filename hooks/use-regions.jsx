@@ -4,8 +4,8 @@ import axios from 'axios';
 
 const fetchRegions = async () => {
   const response = await axios.get(`${BASE_URL}/regions/`);
-  console.log("data", response.data.results)
-  return response.data.results;
+  console.log("data for regions", response.data.results)
+  return response?.data;
 };
 
 export const useRegions = () =>

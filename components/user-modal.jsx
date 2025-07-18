@@ -26,20 +26,23 @@ import { useDistricts } from "@/hooks/use-districts";
 import { useRegions } from "@/hooks/use-regions";
 // import CommunityAutocomplete from "@/components/community-autocomplete";
 import { ROLES } from "@/lib/constants";
+import { data } from "autoprefixer";
 
 const userSchema = z
   .object({
     fullName: z.string().min(2, "Name must be at least 2 characters"),
     email: z.string().email("Invalid email address"),
     phone: z.string().regex(/^[0-9]{10}$/, "Phone must be a 10-digit number"),
-    role: z.enum(ROLES, {
-      required_error: "Please select a role",
-    }),
+    role: z.string().min(1, "Please select a role"),
     region: z.string().optional(),
     district: z.string().optional(),
     status: z.enum(["active", "inactive"], {
       required_error: "Please select a status",
     }),
+  })
+  .refine((val) => ROLES.includes(val.role), {
+    message: "Please select a valid role",
+    path: ["role"],
   })
   .refine(
     (data) => {
@@ -53,8 +56,7 @@ const userSchema = z
       message:
         "Region is required for Regional Officers, District Officers, and Field Reporters",
       path: ["region"],
-    }
-  )
+    })
   .refine(
     (data) => {
       // district required for district_officer and reporter
@@ -82,6 +84,9 @@ export default function UserModal({
     useAddUser();
   const [mounted, setMounted] = useState(false);
   const { data: regions, isLoading: regionsLoading } = useRegions();
+  console.log("regions data", regions)
+
+ 
   const {
     register,
     handleSubmit,
@@ -105,11 +110,13 @@ export default function UserModal({
   });
   // check the selected region
   const selectedRegion = watch("region");
-  const { data: districts, isLoading: districtsLoading } = useDistricts(
-    selectedRegion,
-    currentUserRole,
-    currentUserRegionId
-  );
+  const { data: districts, isLoading: districtsLoading } = useDistricts(); // fetch all districts
+   console.log("regioselen", selectedRegion)
+  // Filter districts by selected region on the client side
+  const filteredDistricts = selectedRegion
+  ? districts?.filter((d) => d.region?.id === selectedRegion)
+  : districts;
+  console.log("log", filteredDistricts)
 
   // Ensure component is mounted on client before running effects
   useEffect(() => {
@@ -404,14 +411,14 @@ export default function UserModal({
                   </p>
                 )}
               </div>
-              {(role === ROLES[2] || role === ROLES[3]) && (
+              {(role == ROLES[1] || role === ROLES[2] || role === ROLES[3]) && (
                 <div className="space-y-2">
                   <Label htmlFor="district">District *</Label>
                   <Controller
                     name="district"
                     control={control}
                     render={({ field }) => {
-                      const selectedDistrict = districts?.find(
+                      const selectedDistrict = filteredDistricts?.find(
                         (d) => d.id === field.value
                       );
                       return (
@@ -430,13 +437,13 @@ export default function UserModal({
                               <SelectItem value="loading" disabled>
                                 Loading districts...
                               </SelectItem>
-                            ) : districts && districts.length > 0 ? (
-                              districts.map((district) => (
+                            ) : filteredDistricts && filteredDistricts.length > 0 ? (
+                              filteredDistricts?.map((district) => (
                                 <SelectItem
                                   key={district.id}
                                   value={district.id}
                                 >
-                                  {district?.name || ""}
+                                  {district?.name}
                                 </SelectItem>
                               ))
                             ) : selectedRegion ? (
@@ -517,6 +524,19 @@ export default function UserModal({
             </Button>
           </div>
         </form>
+        {/* Debug: List all loaded districts for developer visibility */}
+        {/* {districts && !districtsLoading && (
+          <div className="mt-8 p-4 bg-gray-100 rounded">
+            <h4 className="font-bold mb-2">Loaded Districts ({districts.length}):</h4>
+            <ul className="max-h-40 overflow-y-auto text-sm">
+              {districts.map((d) => (
+                <li key={d.id}>
+                  {d?.name} <span className="text-gray-500">({d?.region?.name})</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )} */}
       </DialogContent>
     </Dialog>
   );

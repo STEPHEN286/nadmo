@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 
 
 import { Button } from "@/components/ui/button"
@@ -35,12 +35,14 @@ import {
   TableIcon,
   LoaderIcon,
   Trash2,
+  X, // <-- Add this line
 } from "lucide-react"
 import Link from "next/link"
 import { mockReports, statusConfig, severityConfig, disasterTypes } from "@/lib/disaster-data"
 import { NadmoLayout } from "@/components/layout/nadmo-layout"
 import { exportReports, getAvailableFields } from "@/lib/export-utils"
 import useReports, { useUpdateReportStatus } from "@/hooks/use-reports"
+import { useRegions } from "@/hooks/use-regions"
 import axios from "axios";
 import { BASE_URL } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
@@ -52,6 +54,7 @@ import { useDeleteReport } from "@/hooks/use-delete-report";
 export default function NADMOReportsPage() {
   // All hooks at the top
   const [searchTerm, setSearchTerm] = useState("")
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
   const [severityFilter, setSeverityFilter] = useState("all")
@@ -71,8 +74,29 @@ export default function NADMOReportsPage() {
   const [deletingReport, setDeletingReport] = useState(null);
   const deleteReportMutation = useDeleteReport();
 
-  const { reports, isPending, error, count, next, previous, refetch } = useReports(currentPage);
-  
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Create filters object for the API
+  const filters = {
+    search: debouncedSearchTerm,
+    status: statusFilter,
+    type: typeFilter,
+    severity: severityFilter,
+    region: regionFilter,
+    date: dateFilter,
+    sortField,
+    sortDirection,
+  };
+
+  const { reports, isPending, error, count, next, previous, refetch } = useReports(currentPage, filters);
+  const { data: regions } = useRegions();
 
   const pageSize = 10;
   const totalPages = Math.ceil(count / pageSize) || 1;
@@ -94,9 +118,8 @@ export default function NADMOReportsPage() {
 
 
 
-  // Filter and search reports
+  // Log reports from API
   console.log("reports from useReports hook:", reports);
-  const filteredReports = reports;
 
   // Show loading state
   if (isPending) {
@@ -149,10 +172,10 @@ export default function NADMOReportsPage() {
   }
 
   const handleSelectAll = () => {
-    if (selectedReports.length === filteredReports.length) {
+    if (selectedReports.length === reports.length) {
       setSelectedReports([])
     } else {
-      setSelectedReports(filteredReports.map((r) => r.id))
+      setSelectedReports(reports.map((r) => r.id))
     }
   }
 
@@ -219,6 +242,15 @@ export default function NADMOReportsPage() {
     setDateFilter("all")
     setCurrentPage(1)
   }
+
+  // Check if any filters are active
+  const hasActiveFilters = 
+    searchTerm || 
+    statusFilter !== "all" || 
+    typeFilter !== "all" || 
+    severityFilter !== "all" || 
+    regionFilter !== "all" || 
+    dateFilter !== "all"
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -367,7 +399,7 @@ export default function NADMOReportsPage() {
     },
   ]
 
-  // Statistics configuration
+  // Statistics configuration - calculate based on current filtered data
   const statsData = [
     {
       label: "Total Reports",
@@ -458,16 +490,19 @@ export default function NADMOReportsPage() {
         { value: "low", label: " Low", icon: "" },
       ],
     },
-    // {
-    //   key: "region",
-    //   type: "select",
-    //   placeholder: "Region",
-    //   value: regionFilter,
-    //   options: [
-    //     { value: "all", label: "All Regions" },
-    //     ...regions.map((region) => ({ value: region, label: region })),
-    //   ],
-    // },
+    {
+      key: "region",
+      type: "select",
+      placeholder: "Region",
+      value: regionFilter,
+      options: [
+        { value: "all", label: "All Regions" },
+        ...(regions || []).map((region) => ({ 
+          value: region.id, 
+          label: region.name 
+        })),
+      ],
+    },
     {
       key: "date",
       type: "date",
@@ -533,6 +568,59 @@ export default function NADMOReportsPage() {
         {/* Statistics Cards */}
         <ReportStats stats={statsData} />
 
+        {/* Filter Summary */}
+        {hasActiveFilters && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Filter className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-900">Active Filters:</span>
+                <div className="flex flex-wrap gap-2">
+                  {searchTerm && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      Search: "{searchTerm}"
+                    </span>
+                  )}
+                  {statusFilter !== "all" && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      Status: {statusFilter}
+                    </span>
+                  )}
+                  {typeFilter !== "all" && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      Type: {typeFilter}
+                    </span>
+                  )}
+                  {severityFilter !== "all" && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      Severity: {severityFilter}
+                    </span>
+                  )}
+                  {regionFilter !== "all" && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      Region: {regions?.find(r => r.id === regionFilter)?.name || regionFilter}
+                    </span>
+                  )}
+                  {dateFilter !== "all" && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      Date: {dateFilter}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-blue-700">
+                  Showing {reports.length} of {count} reports
+                </span>
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-blue-600 hover:text-blue-800">
+                  <X className="h-4 w-4 mr-1" />
+                  Clear All
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Filters */}
         <ReportFilters
           title="Filters & Search"
@@ -542,6 +630,7 @@ export default function NADMOReportsPage() {
           onFilterChange={handleFilterChange}
           onClearFilters={clearFilters}
           showClearButton={true}
+          isLoading={isPending}
         />
 
         {/* Reports Table */}
@@ -569,7 +658,7 @@ export default function NADMOReportsPage() {
           bulkActions={bulkActions}
           onBulkAction={handleBulkStatusUpdate}
           isLoading={isUpdating}
-          emptyMessage="No reports found matching your criteria"
+          emptyMessage={hasActiveFilters ? "No reports found matching your current filters. Try adjusting your search criteria." : "No reports found"}
           rowActions={rowActions}
         />
         {/* Status Edit Modal */}

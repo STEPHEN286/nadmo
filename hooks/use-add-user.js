@@ -4,7 +4,7 @@ import axios from "axios";
 import { BASE_URL } from "@/lib/utils";
 
 const postUser = async (userData) => {
-  console.log("postUser called with:", userData);
+  // console.log("postUser called with:", userData);
   try {
     const response = await axios.post(`${BASE_URL}/users/`, userData);
     return response.data;

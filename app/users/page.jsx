@@ -226,7 +226,7 @@ export default function UserManagementPage() {
   }
 
   // Pagination controls
-  const pageSize = users.length || 1;
+  const pageSize = 10;
   const totalPages = Math.ceil(count / pageSize) || 1;
  
 
@@ -238,9 +238,9 @@ export default function UserManagementPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
             <p className="text-gray-600">
-              {user?.role === "GES_ADMIN" ? "Manage regional officers and district officers" :
-               user?.role === "GES_REGIONAL_OFFICER" ? "Manage district officers in your assigned region" :
-               "Manage users in your assigned district"}
+              {user?.role === ROLES[0] ? "Manage regional officers  district officers and repoter" :
+               user?.role === ROLES[1] ? "Manage district officers in your assigned region and Reporter" :
+               "Manage reporters in your assigned district"}
             </p>
           </div>
           <Button className="mt-4 sm:mt-0 bg-green-600 hover:bg-green-700" onClick={handleAddUser}>
@@ -250,7 +250,7 @@ export default function UserManagementPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -294,7 +294,20 @@ export default function UserManagementPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Regional Officers</p>
                   <p className="text-2xl font-bold text-orange-600">
-                    {filteredUsers?.filter((u) => u.role === "GES_REGIONAL_OFFICER").length || 0}
+                    {filteredUsers?.filter((u) => u.role === ROLES[1]).length || 0}
+                  </p>
+                </div>
+                <MapPin className="h-8 w-8 text-orange-600" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Reporter</p>
+                  <p className="text-2xl font-bold text-orange-600">
+                    {filteredUsers?.filter((u) => u.role === ROLES[2]).length || 0}
                   </p>
                 </div>
                 <MapPin className="h-8 w-8 text-orange-600" />

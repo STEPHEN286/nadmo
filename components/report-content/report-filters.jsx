@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Filter, X } from "lucide-react"
+import { Search, Filter, X, Loader2 } from "lucide-react"
 
 export function ReportFilters({
   title = "Filters & Search",
@@ -15,6 +15,7 @@ export function ReportFilters({
   onClearFilters,
   showClearButton = true,
   className = "",
+  isLoading = false,
 }) {
   const renderFilter = (filter) => {
     switch (filter.type) {
@@ -28,6 +29,7 @@ export function ReportFilters({
                 value={searchTerm}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="pl-10"
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -39,6 +41,7 @@ export function ReportFilters({
             key={filter.key}
             value={filter.value}
             onValueChange={(value) => onFilterChange(filter.key, value)}
+            disabled={isLoading}
           >
             <SelectTrigger>
               <SelectValue placeholder={filter.placeholder} />
@@ -60,6 +63,7 @@ export function ReportFilters({
             key={filter.key}
             value={filter.value}
             onValueChange={(value) => onFilterChange(filter.key, value)}
+            disabled={isLoading}
           >
             <SelectTrigger>
               <SelectValue placeholder={filter.placeholder} />
@@ -88,6 +92,9 @@ export function ReportFilters({
           <CardTitle className="flex items-center">
             <Filter className="h-5 w-5 mr-2" />
             {title}
+            {isLoading && (
+              <Loader2 className="h-4 w-4 ml-2 animate-spin" />
+            )}
           </CardTitle>
           {hasActiveFilters && (
             <CardDescription>
@@ -106,7 +113,7 @@ export function ReportFilters({
               )}
             </div>
             {showClearButton && (
-              <Button variant="ghost" size="sm" onClick={onClearFilters}>
+              <Button variant="ghost" size="sm" onClick={onClearFilters} disabled={isLoading}>
                 <X className="h-4 w-4 mr-1" />
                 Clear All Filters
               </Button>
