@@ -18,7 +18,7 @@ export default function SetPasswordPage() {
 
   const mutation = useMutation({
     mutationFn: async ({ uid, token, password }) => {
-      const res = await axios.post(`${BASE_URL}/set-password/`,{uid, token, password });
+      const res = await axios.post(`${BASE_URL}/auth/set-password/`,{uid, token, password });
       return res.data;
     },
     onSuccess: () => {
