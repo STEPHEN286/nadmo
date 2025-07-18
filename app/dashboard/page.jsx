@@ -2,7 +2,7 @@
 
 import { NadmoLayout } from "@/components/layout/nadmo-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
@@ -214,13 +214,13 @@ export default function dashboard() {
       color: "text-yellow-600", 
       bgColor: "bg-yellow-50" 
     },
-    { 
-      name: "Active Alerts", 
-      value: filteredPending, 
-      icon: AlertTriangle, 
-      color: "text-red-600", 
-      bgColor: "bg-red-50" 
-    },
+    // { 
+    //   name: "Active Alerts", 
+    //   value: filteredPending, 
+    //   icon: AlertTriangle, 
+    //   color: "text-red-600", 
+    //   bgColor: "bg-red-50" 
+    // },
   ]
 
   // Add filter indicator
@@ -260,7 +260,7 @@ export default function dashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 w-full">
           {disasterStats.map((stat) => (
             <Card key={stat.name} className="relative overflow-hidden">
               <CardContent className="p-4 lg:p-6">

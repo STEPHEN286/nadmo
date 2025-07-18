@@ -31,13 +31,10 @@ export function useAddUser() {
   const addUserMutation = useMutation({
     mutationFn: postUser,
     onSuccess: (data) => {
-      const emailStatus = data.emailSent 
-        ? "Welcome email sent successfully." 
-        : "User created but email delivery failed.";
-      
+    
       toast({
         title: "User added successfully",
-        description: `${data.user?.fullName || 'User'} has been added to the system. ${emailStatus}`,
+        description: `${data.user?.fullName || 'User'} has been added to the system. `,
         className: "bg-green-50 border-green-200 text-green-800",
       });
       

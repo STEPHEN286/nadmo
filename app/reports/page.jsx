@@ -408,14 +408,14 @@ export default function NADMOReportsPage() {
       iconColor: "text-blue-600",
       iconBgColor: "bg-blue-50",
     },
-    {
-      label: "New Reports",
-      value: reports.filter((r) => r.status === "new").length.toString(),
-      icon: AlertTriangle,
-      iconColor: "text-red-600",
-      iconBgColor: "bg-red-50",
-      valueColor: "text-red-600",
-    },
+    // {
+    //   label: "New Reports",
+    //   value: reports.filter((r) => r.status === "new").length.toString(),
+    //   icon: AlertTriangle,
+    //   iconColor: "text-red-600",
+    //   iconBgColor: "bg-red-50",
+    //   valueColor: "text-red-600",
+    // },
     {
       label: "In Progress",
       value: reports.filter((r) => r.status === "in_progress").length.toString(),
@@ -457,7 +457,7 @@ export default function NADMOReportsPage() {
       value: statusFilter,
       options: [
         { value: "all", label: "All Statuses" },
-        { value: "new", label: " New", icon: "" },
+        // { value: "new", label: " New", icon: "" },
         { value: "in_progress", label: " In Progress", icon: "" },
         { value: "resolved", label: " Resolved", icon: "" },
         { value: "fake", label: " Fake", icon: "" },
