@@ -250,67 +250,80 @@ export default function UserManagementPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-6 gap-4">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{count || 0}</p>
+                  <p className="text-xs font-medium text-gray-600">Total</p>
+                  <p className="text-lg font-bold text-gray-900">{count || 0}</p>
                 </div>
-                <Users className="h-8 w-8 text-blue-600" />
+                <Users className="h-6 w-6 text-blue-600" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Active Users</p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-xs font-medium text-gray-600">Active</p>
+                  <p className="text-lg font-bold text-green-600">
                     {filteredUsers?.filter((u) => u.is_active).length || 0}
                   </p>
                 </div>
-                <Shield className="h-8 w-8 text-green-600" />
+                <Shield className="h-6 w-6 text-green-600" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Admins</p>
-                  <p className="text-2xl font-bold text-purple-600">
+                  <p className="text-xs font-medium text-gray-600">Admins</p>
+                  <p className="text-lg font-bold text-purple-600">
                     {filteredUsers?.filter((u) => u.role === "admin").length || 0}
                   </p>
                 </div>
-                <Key className="h-8 w-8 text-purple-600" />
+                <Key className="h-6 w-6 text-purple-600" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Regional Officers</p>
-                  <p className="text-2xl font-bold text-orange-600">
+                  <p className="text-xs font-medium text-gray-600">Regional</p>
+                  <p className="text-lg font-bold text-orange-600">
                     {filteredUsers?.filter((u) => u.role === ROLES[1]).length || 0}
                   </p>
                 </div>
-                <MapPin className="h-8 w-8 text-orange-600" />
+                <MapPin className="h-6 w-6 text-orange-600" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Reporter</p>
-                  <p className="text-2xl font-bold text-orange-600">
+                  <p className="text-xs font-medium text-gray-600">District</p>
+                  <p className="text-lg font-bold text-orange-600">
                     {filteredUsers?.filter((u) => u.role === ROLES[2]).length || 0}
                   </p>
                 </div>
-                <MapPin className="h-8 w-8 text-orange-600" />
+                <MapPin className="h-6 w-6 text-orange-600" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-600">Reporter</p>
+                  <p className="text-lg font-bold text-orange-600">
+                    {filteredUsers?.filter((u) => u.role === ROLES[3]).length || 0}
+                  </p>
+                </div>
+                <MapPin className="h-6 w-6 text-orange-600" />
               </div>
             </CardContent>
           </Card>
