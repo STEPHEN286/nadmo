@@ -171,7 +171,7 @@ export default function useStatistics(options = {}) {
   const {
     enabled = true,
     staleTime = 5 * 60 * 1000, // 5 minutes
-    refetchInterval = 5 * 60 * 1000, // 5 minutes
+    refetchInterval = 40000, // 40 seconds
   } = options;
 
   // Check if user is authenticated
