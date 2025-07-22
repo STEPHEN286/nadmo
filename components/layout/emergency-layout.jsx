@@ -32,7 +32,7 @@ export function EmergencyLayout({ children }) {
                   className="flex items-center space-x-2 px-3"
                 >
                   <User className="h-5 w-5 text-red-600" />
-                  <span className="hidden sm:inline text-gray-900 font-medium">{user.email || "Profile"}</span>
+                  <span className="hidden sm:inline text-gray-900 font-medium">{user.profile.full_name || "Reporter"}</span>
                 </Button>
               ) : (
                 <>

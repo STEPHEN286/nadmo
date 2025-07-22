@@ -377,36 +377,38 @@ export default function ReportViewPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Reporter Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <User className="h-5 w-5" />
-                  <span>Reporter</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm">{report.reporter.email}</span>
-                </div>
-                {report.reporter.profile?.phone_number && (
+            {report.reporter && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <User className="h-5 w-5" />
+                    <span>Reporter</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
                   <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm">{report.reporter.profile.phone_number}</span>
+                    <Mail className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm">{report.reporter?.email}</span>
                   </div>
-                )}
-                {report.reporter.profile?.full_name && (
+                  {report.reporter?.profile.phone_number && (
+                    <div className="flex items-center space-x-2">
+                      <Phone className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm">{report.reporter.profile.phone_number}</span>
+                    </div>
+                  )}
+                  {report.reporter.profile?.full_name && (
+                    <div className="flex items-center space-x-2">
+                      <User className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm">{report.reporter.profile.full_name}</span>
+                    </div>
+                  )}
                   <div className="flex items-center space-x-2">
-                    <User className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm">{report.reporter.profile.full_name}</span>
+                    <Shield className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm capitalize">{report.reporter.role}</span>
                   </div>
-                )}
-                <div className="flex items-center space-x-2">
-                  <Shield className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm capitalize">{report.reporter.role}</span>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
            
 

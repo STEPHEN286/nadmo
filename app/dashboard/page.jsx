@@ -344,7 +344,7 @@ export default function dashboard() {
         </div>
 
         {/* Emergency Alerts Carousel */}
-        <SwiperCarousel alerts={emergencyAlerts} />
+        {/* <SwiperCarousel alerts={emergencyAlerts} /> */}
       </div>
     </NadmoLayout>
   )

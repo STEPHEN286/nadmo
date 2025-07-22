@@ -37,6 +37,8 @@ export default function UserManagementPage() {
   const { user} = useAuth()
   const { isPending, users, error, count, next, previous } = useUsers(page)
   const deleteUserMutation = useDeleteUser()
+
+  console.log("user", users)
   
 
   // console.log("user", users)
@@ -109,12 +111,23 @@ export default function UserManagementPage() {
     // Admin can see all users except other admins (for deletion purposes)
     else if (userRole === "admin") {
       // Show all users except other admins in the delete context
-      hasAccess = itemRole !== "admin" || userItem.id === user.id
+      hasAccess = true;
     }
-
+      
+    if (!(matchesSearch && matchesRole && matchesStatus && hasAccess)) {
+      console.log('User excluded:', {
+        userItem,
+        matchesSearch,
+        matchesRole,
+        matchesStatus,
+        hasAccess
+      });
+    }
+  
     return matchesSearch && matchesRole && matchesStatus && hasAccess
   })
 
+  
   const handleEditUser = (userData) => {
     setEditingUser(userData)
     setIsAddUserOpen(true)
@@ -228,7 +241,10 @@ export default function UserManagementPage() {
   // Pagination controls
   const pageSize = 10;
   const totalPages = Math.ceil(count / pageSize) || 1;
- 
+
+  // Debug: Log filteredUsers and users
+  console.log('filteredUsers', filteredUsers);
+  console.log('raw users', users);
 
   return (
     <NadmoLayout>
@@ -380,7 +396,7 @@ export default function UserManagementPage() {
                     <TableHead>Role</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Last Login</TableHead>
+                    {/* <TableHead>Last Login</TableHead> */}
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -415,7 +431,7 @@ export default function UserManagementPage() {
                           {!user.profile?.region && !user.profile?.district && <span className="text-gray-400">N/A</span>}
                         </div>
                       </TableCell>
-                      <TableCell>{getStatusBadge(user.is_active)}</TableCell>
+                      {/* <TableCell>{getStatusBadge(user.is_active)}</TableCell> */}
                       <TableCell>
                         <span className="text-sm text-gray-600">{new Date(user.last_login).toLocaleDateString()}</span>
                       </TableCell>

@@ -127,14 +127,14 @@ export function useReporterAuth() {
   });
 
   const signupMutation = useMutation({
-    mutationFn: async ({ email, password, phone_number, region, district }) => {
-      const res = await axios.post(`${BASE_URL}/register/`, { 
+    mutationFn: async ({ email, password, full_name, phone_number, region, district }) => {
+      const res = await axios.post(`${BASE_URL}/auth/register/`, { 
         email, 
+        full_name,
         password, 
         phone_number, 
         region, 
         district
-        
       });
       return res.data;
     },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useReporterAuth } from "@/hooks/use-reporter-auth";
-import { User, Lock, Phone, MapPin, Shield, Mail, Users } from "lucide-react";
+import { User, Lock, Phone, MapPin, Shield, Mail, Users, Eye, EyeOff } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -22,26 +22,23 @@ import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { useRegions } from "@/hooks/use-regions";
 import { useDistricts } from "@/hooks/use-districts";
+import { signupSchema } from "@/lib/utils";
 
-const signupSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  phone_number: z.string().min(10, "Please enter a valid phone number"),
-  region: z.string().min(1, "Please select a region"),
-  district: z.string().min(1, "Please select a district"),
-});
 
 export default function NADMOSignupPage() {
   const { signup, user, mounted, isPending, error, isError } = useReporterAuth();
   const router = useRouter();
   const { toast } = useToast();
 
-  // Move useForm above all uses of form
+
+  
   const form = useForm({
     resolver: zodResolver(signupSchema),
     defaultValues: {
+      full_name: "",
       email: "",
       password: "",
+      confirmPassword: "",
       phone_number: "",
       region: "",
       district: "",
@@ -52,6 +49,9 @@ export default function NADMOSignupPage() {
   const selectedRegion = form.watch("region");
   console.log("region", selectedRegion)
   const { data: districts, isLoading: districtsLoading } = useDistricts(selectedRegion);
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -119,7 +119,30 @@ export default function NADMOSignupPage() {
             <CardContent className="pt-0">
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 {/* Email and Password in one row */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1  gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName" className="text-sm font-medium text-gray-700">
+                      Full Name
+                    </Label>
+                    <Input
+                      id="fullName"
+                      type="text"
+                      placeholder="e.g. John Doe"
+                      {...form.register("full_name")}
+                      className="h-12 border-gray-200 focus:border-red-400 focus:ring-red-200"
+                      disabled={isPending}
+                      onChange={e => {
+                        form.clearErrors("full_name");
+                        form.setValue("full_name", e.target.value);
+                      }}
+                    />
+                    {form.formState.errors.full_name && (
+                      <p className="text-sm text-red-500">
+                        {form.formState.errors.full_name.message}
+                      </p>
+                    )}
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-sm font-medium text-gray-700">
                       Email Address
@@ -129,10 +152,14 @@ export default function NADMOSignupPage() {
                       <Input
                         id="email"
                         type="email"
-                        placeholder="Enter your email"
+                        placeholder="e.g. reporter@example.com"
                         {...form.register("email")}
                         className="pl-10 h-12 border-gray-200 focus:border-red-400 focus:ring-red-200"
                         disabled={isPending}
+                        onChange={e => {
+                          form.clearErrors("email");
+                          form.setValue("email", e.target.value);
+                        }}
                       />
                     </div>
                     {form.formState.errors.email && (
@@ -143,31 +170,6 @@ export default function NADMOSignupPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-                      Password
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-4 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="Enter your password"
-                        {...form.register("password")}
-                        className="pl-10 h-12 border-gray-200 focus:border-red-400 focus:ring-red-200"
-                        disabled={isPending}
-                      />
-                    </div>
-                    {form.formState.errors.password && (
-                      <p className="text-sm text-red-500">
-                        {form.formState.errors.password.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Phone and Region in one row */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
                     <Label htmlFor="phone_number" className="text-sm font-medium text-gray-700">
                       Phone Number
                     </Label>
@@ -176,10 +178,14 @@ export default function NADMOSignupPage() {
                       <Input
                         id="phone_number"
                         type="tel"
-                        placeholder="Enter your phone"
+                        placeholder="e.g. 0244123456"
                         {...form.register("phone_number")}
                         className="pl-10 h-12 border-gray-200 focus:border-red-400 focus:ring-red-200"
                         disabled={isPending}
+                        onChange={e => {
+                          form.clearErrors("phone_number");
+                          form.setValue("phone_number", e.target.value);
+                        }}
                       />
                     </div>
                     {form.formState.errors.phone_number && (
@@ -188,80 +194,160 @@ export default function NADMOSignupPage() {
                       </p>
                     )}
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="region" className="text-sm font-medium text-gray-700">
-                      Region
-                    </Label>
-                    <Select
-                      value={form.watch("region")}
-                      onValueChange={(value) => {
-                        form.setValue("region", value);
-                        form.setValue("district", ""); // Reset district when region changes
-                      }}
-                      disabled={isPending || regionsLoading}
-                    >
-                      <SelectTrigger className="h-12 border-gray-200 focus:border-red-400 focus:ring-red-200">
-                        <SelectValue placeholder={regionsLoading ? "Loading regions..." : "Select region"} />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-60 overflow-y-auto">
-                        {regions && regions?.length > 0 ? (
-                          regions.map((region) => (
-                            <SelectItem key={region.id} value={region.id}>
-                              {region.name}
+                {/* Phone and Region in one row */}
+              
+                 
+
+                  {/* Replace the region and district fields section with a grid for side-by-side layout */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="region" className="text-sm font-medium text-gray-700">
+                        Region
+                      </Label>
+                      <Select
+                        value={form.watch("region")}
+                        onValueChange={value => {
+                          form.clearErrors("region");
+                          form.setValue("region", value);
+                          form.setValue("district", "");
+                        }}
+                        disabled={isPending || regionsLoading}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select region" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60 overflow-y-auto">
+                          {regions && regions.length > 0 ? (
+                            regions.map((region) => (
+                              <SelectItem key={region.id} value={region.id}>
+                                {region.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="loading" disabled>
+                              Loading regions...
                             </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="__none__" disabled>
-                            {regionsLoading ? "Loading..." : "No regions found"}
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {form.formState.errors.region && (
+                          )}
+                        </SelectContent>
+                      </Select>
+                      {form.formState.errors.region && (
+                        <p className="text-sm text-red-500">
+                          {form.formState.errors.region.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="district" className="text-sm font-medium text-gray-700">
+                        District
+                      </Label>
+                      <Select
+                        value={form.watch("district")}
+                        onValueChange={value => {
+                          form.clearErrors("district");
+                          form.setValue("district", value);
+                        }}
+                        disabled={isPending || districtsLoading || !form.watch("region")}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select district" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60 overflow-y-auto">
+                          {districtsLoading ? (
+                            <SelectItem value="loading" disabled>
+                              Loading districts...
+                            </SelectItem>
+                          ) : districts && districts.length > 0 ? (
+                            districts.map((district) => (
+                              <SelectItem key={district.id} value={district.id}>
+                                {district.name}
+                              </SelectItem>
+                            ))
+                          ) : form.watch("region") ? (
+                            <SelectItem value="no-districts" disabled>
+                              No districts found
+                            </SelectItem>
+                          ) : (
+                            <SelectItem value="select-region-first" disabled>
+                              Select a region first
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      {form.formState.errors.district && (
+                        <p className="text-sm text-red-500">
+                          {form.formState.errors.district.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                
+
+                <div className="space-y-2">
+                    <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                      Password
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-4 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="e.g. StrongPassword123!"
+                        {...form.register("password")}
+                        className="pl-10 h-12 border-gray-200 focus:border-red-400 focus:ring-red-200 pr-10"
+                        disabled={isPending}
+                        onChange={e => {
+                          form.clearErrors("password");
+                          form.setValue("password", e.target.value);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-4 text-gray-400 hover:text-gray-700"
+                        onClick={() => setShowPassword((v) => !v)}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {form.formState.errors.password && (
                       <p className="text-sm text-red-500">
-                        {form.formState.errors.region.message}
+                        {form.formState.errors.password.message}
                       </p>
                     )}
                   </div>
-                </div>
-
-                {/* District Select */}
+                {/* Confirm Password */}
                 <div className="space-y-2">
-                  <Label htmlFor="district" className="text-sm font-medium text-gray-700">
-                    District
+                  <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
+                    Confirm Password
                   </Label>
-                  <Select
-                    value={form.watch("district")}
-                    onValueChange={(value) => form.setValue("district", value)}
-                    disabled={isPending || !selectedRegion || districtsLoading}
-                  >
-                    <SelectTrigger className="h-12 border-gray-200 focus:border-red-400 focus:ring-red-200">
-                      <SelectValue placeholder={
-                        !selectedRegion
-                          ? "Select region first"
-                          : districtsLoading
-                          ? "Loading districts..."
-                          : "Select district"
-                      } />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60 overflow-y-auto">
-                      {districts && districts.length > 0 ? (
-                        districts.map((district) => (
-                          <SelectItem key={district.id || district.uuid} value={district.id || district.uuid}>
-                            {district.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="__none__" disabled>
-                          {districtsLoading ? "Loading..." : "No districts found"}
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.district && (
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-4 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Re-enter your password"
+                      {...form.register("confirmPassword")}
+                      className="pl-10 h-12 border-gray-200 focus:border-red-400 focus:ring-red-200 pr-10"
+                      disabled={isPending}
+                      onChange={e => {
+                        form.clearErrors("confirmPassword");
+                        form.setValue("confirmPassword", e.target.value);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-4 text-gray-400 hover:text-gray-700"
+                      onClick={() => setShowConfirmPassword((v) => !v)}
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {form.formState.errors.confirmPassword && (
                     <p className="text-sm text-red-500">
-                      {form.formState.errors.district.message}
+                      {form.formState.errors.confirmPassword.message}
                     </p>
                   )}
                 </div>

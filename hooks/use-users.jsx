@@ -5,9 +5,10 @@ import axios from "axios";
 
 
 
-const fetchUser = async (page = 1) => {
+const fetchUser = async (page ) => {
     try {
       const response = await axios.get(`${BASE_URL}/users/?page=${page}`);
+      console.log("user", response.data)
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || error.message);

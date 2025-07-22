@@ -32,7 +32,7 @@ import { BackButton } from "@/components/ui/back-button"
 import useUserReports from "@/hooks/use-user-reports";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertTriangle, MapPin, Clock, User as UserIcon, Shield } from "lucide-react";
-import { severityConfig } from "@/lib/disaster-data";
+
 import { useQuery } from "@tanstack/react-query";
 import { BASE_URL } from "@/lib/utils";
 import { useForm, Controller } from "react-hook-form";
@@ -55,6 +55,8 @@ import {
 } from "@/components/ui/form";
 import Link from "next/link";
 import ReporterViewReportModalContent from "@/components/ReporterViewReportModalContent";
+import { useProfile } from "@/hooks/use-user-profile"
+import ReporterSettings from "@/components/layout/reporter-settings";
 
 // Move this hook to the top-level so it is accessible everywhere in the file
 function useReporterViewReport(id) {
@@ -87,6 +89,7 @@ export default function ProfilePage() {
   const router = useRouter()
   const { toast } = useToast()
   const { user, logout, mounted } = useReporterAuth()
+  const { profile, isProfileLoading, profileError, refetchProfile } = useProfile()
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({
     phone_number: "",
@@ -256,11 +259,11 @@ export default function ProfilePage() {
                   <Avatar className="h-16 w-16">
                     <AvatarImage src={user.profile_image} />
                     <AvatarFallback className="bg-red-100 text-red-600 text-xl">
-                      {user.email?.charAt(0).toUpperCase()}
+                      {profile?.full_name?.charAt(0).toUpperCase() || "R"}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <CardTitle className="text-lg">{user.email}</CardTitle>
+                    <CardTitle className="text-lg">{profile.full_name}</CardTitle>
                     <CardDescription>Emergency Reporter</CardDescription>
                   </div>
                 </div>
@@ -273,13 +276,13 @@ export default function ProfilePage() {
                   </div>
                   <div className="flex items-center space-x-2 text-sm">
                     <Phone className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-600">{user.profile?.phone_number || "Not provided"}</span>
+                    <span className="text-gray-600">{profile?.phone_number || "Not provided"}</span>
                   </div>
                   <div className="flex items-center space-x-2 text-sm">
                     <MapPin className="h-4 w-4 text-gray-400" />
                     <span className="text-gray-600">
-                      {user.profile?.district && user.profile?.region 
-                        ? `${user.profile.district}, ${user.profile.region}`
+                      {profile?.district && profile?.region 
+                        ? `${profile.district.name}, ${profile.region.name}`
                         : "Location not set"
                       }
                     </span>
@@ -302,15 +305,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleEditProfile}
-                    className="flex-1"
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Profile
-                  </Button>
+                 
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -445,80 +440,7 @@ export default function ProfilePage() {
               </TabsContent>
 
               <TabsContent value="settings" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Settings className="h-5 w-5" />
-                      <span>Profile Settings</span>
-                    </CardTitle>
-                    <CardDescription>
-                      Update your contact information and preferences
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {isEditing ? (
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="phone_number">Phone Number</Label>
-                          <Input
-                            id="phone_number"
-                            value={editForm.phone_number}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, phone_number: e.target.value }))}
-                            placeholder="Enter your phone number"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="region">Region</Label>
-                          <Input
-                            id="region"
-                            value={editForm.region}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, region: e.target.value }))}
-                            placeholder="Enter your region"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="district">District</Label>
-                          <Input
-                            id="district"
-                            value={editForm.district}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, district: e.target.value }))}
-                            placeholder="Enter your district"
-                          />
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button onClick={handleSaveProfile} className="flex-1">
-                            <Save className="h-4 w-4 mr-2" />
-                            Save Changes
-                          </Button>
-                          <Button variant="outline" onClick={handleCancelEdit}>
-                            <X className="h-4 w-4 mr-2" />
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Phone Number</Label>
-                          <p className="text-sm text-gray-600">{user.profile?.phone_number || "Not provided"}</p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Region</Label>
-                          <p className="text-sm text-gray-600">{user.profile?.region || "Not provided"}</p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>District</Label>
-                          <p className="text-sm text-gray-600">{user.profile?.district || "Not provided"}</p>
-                        </div>
-                        <Button onClick={handleEditProfile}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit Profile
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
+                <ReporterSettings />
                 <Card>
                   <CardHeader>
                     <CardTitle>Account Settings</CardTitle>

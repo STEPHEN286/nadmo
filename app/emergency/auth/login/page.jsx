@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useReporterAuth } from "@/hooks/use-reporter-auth";
-import { Shield, User, Lock, Heart } from "lucide-react";
+import { Shield, User, Lock, Heart, Eye, EyeOff } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -25,6 +25,7 @@ export default function NADMOLoginPage() {
   const { login, user, mounted, isPending, error, isError } = useReporterAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(loginSchema),
@@ -129,12 +130,20 @@ export default function NADMOLoginPage() {
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <Input
                       id="password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
                       {...form.register("password")}
-                      className="pl-10 h-12 border-gray-200 focus:border-red-400 focus:ring-red-200"
+                      className="pl-10 h-12 border-gray-200 focus:border-red-400 focus:ring-red-200 pr-10"
                       disabled={isPending}
                     />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-4 text-gray-400 hover:text-gray-700"
+                      onClick={() => setShowPassword((v) => !v)}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                   {form.formState.errors.password && (
                     <p className="text-sm text-red-500">
@@ -144,18 +153,18 @@ export default function NADMOLoginPage() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
+                  {/* <div className="flex items-center space-x-2">
                     <Checkbox id="rememberMe" {...form.register("rememberMe")} />
                     <Label htmlFor="rememberMe" className="text-sm text-gray-600">
                       Remember me
                     </Label>
-                  </div>
-                  <button
-                    type="button"
+                  </div> */}
+                  <Link
+                    href="/forgot-password"
                     className="text-sm text-gray-600 hover:text-gray-800"
                   >
                     Forgot password?
-                  </button>
+                  </Link>
                 </div>
 
                 <Button
@@ -175,9 +184,9 @@ export default function NADMOLoginPage() {
               </form>
 
               <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600">
+                {/* <p className="text-sm text-gray-600">
                   Need help? Contact your NADMO administrator
-                </p>
+                </p> */}
                 <p className="text-sm text-gray-600 mt-2">
                   Don't have an account?{" "}
                   <Link href="/emergency/auth/signup" className="text-red-600 hover:text-red-700 font-medium">

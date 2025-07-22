@@ -235,18 +235,28 @@ export default function ReportForm({
                 <Button type="button" variant="outline" onClick={() => {
                   if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
-                      (position) => {
+                      async (position) => {
                         const { latitude, longitude } = position.coords;
-                        setValue(
-                          "gps_coordinates",
-                          `${latitude.toFixed(6)},${longitude.toFixed(6)}`,
-                          { shouldValidate: true, shouldDirty: true }
-                        );
-                        if (toast) {
-                          toast({
-                            title: "Location detected",
-                            description: "Your current location has been added to the report.",
-                          });
+                        try {
+                          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                          const data = await res.json();
+                          setValue("location_description", data.display_name || `${latitude},${longitude}`);
+                          setValue("gps_coordinates", `${latitude.toFixed(6)},${longitude.toFixed(6)}`);
+                          if (toast) {
+                            toast({
+                              title: "Location detected",
+                              description: data.display_name,
+                            });
+                          }
+                        } catch {
+                          setValue("location_description", `${latitude},${longitude}`);
+                          setValue("gps_coordinates", `${latitude.toFixed(6)},${longitude.toFixed(6)}`);
+                          if (toast) {
+                            toast({
+                              title: "Location detected",
+                              description: `${latitude},${longitude}`,
+                            });
+                          }
                         }
                       },
                       (error) => {

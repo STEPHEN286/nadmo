@@ -21,7 +21,7 @@ function emojiToDataUrl(emoji) {
       <filter id='shadow' x='-20%' y='-20%' width='140%' height='140%'>
         <feDropShadow dx='0' dy='2' stdDeviation='2' flood-color='#000' flood-opacity='0.4'/>
       </filter>
-      <circle cx='28' cy='28' r='26' fill='#fff' stroke='#1976d2' stroke-width='4' filter='url(#shadow)'/>
+      <circle cx='28' cy='28' r='26' fill='#fff' stroke='#DC2626' stroke-width='4' filter='url(#shadow)'/>
       <text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='32'>${emoji}</text>
     </svg>
   `;

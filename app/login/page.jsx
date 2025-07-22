@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/use-auth";
-import { Shield, User, Lock, Heart } from "lucide-react";
+import { Shield, User, Lock, Heart, Eye, EyeOff } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -36,6 +36,7 @@ export default function NADMOLoginPage() {
   });
 
   const { isSubmitting } = form.formState;
+  const [showPassword, setShowPassword] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -134,12 +135,20 @@ export default function NADMOLoginPage() {
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <Input
                       id="password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
                       {...form.register("password")}
-                      className="pl-10 h-12 border-gray-200 focus:border-red-400 focus:ring-red-200"
+                      className="pl-10 h-12 border-gray-200 focus:border-red-400 focus:ring-red-200 pr-10"
                       disabled={isPending}
                     />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-4 text-gray-400 hover:text-gray-700"
+                      onClick={() => setShowPassword((v) => !v)}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                   {form.formState.errors.password && (
                     <p className="text-sm text-red-500">
@@ -155,12 +164,12 @@ export default function NADMOLoginPage() {
                       Remember me
                     </Label>
                   </div>
-                  <button
-                    type="button"
+                  <Link
+                    href="/forgot-password"
                     className="text-sm text-gray-600 hover:text-gray-800"
                   >
                     Forgot password?
-                  </button>
+                  </Link>
                 </div>
 
                 <Button
@@ -179,20 +188,7 @@ export default function NADMOLoginPage() {
                 </Button>
               </form>
 
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600">
-                  Need help? Contact your NADMO administrator
-                </p>
-                {/* <p className="text-sm text-gray-600 mt-2">
-                  Don't have an account?{" "}
-                  <Link href="/signup" className="text-red-600 hover:text-red-700 font-medium">
-                    Sign up as Reporter
-                  </Link>
-                </p> */}
-                {/* <p className="text-sm text-gray-500 mt-2">
-                  Reporters can submit emergency reports and track their status
-                </p> */}
-              </div>
+             
             </CardContent>
           </Card>
         </div>

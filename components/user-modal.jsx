@@ -26,7 +26,7 @@ import { useDistricts } from "@/hooks/use-districts";
 import { useRegions } from "@/hooks/use-regions";
 // import CommunityAutocomplete from "@/components/community-autocomplete";
 import { ROLES } from "@/lib/constants";
-import { data } from "autoprefixer";
+// import { data } from "autoprefixer";
 
 const userSchema = z
   .object({
@@ -84,7 +84,7 @@ export default function UserModal({
     useAddUser();
   const [mounted, setMounted] = useState(false);
   const { data: regions, isLoading: regionsLoading } = useRegions();
-  console.log("regions data", regions)
+  // console.log("regions data", regions)
 
  
   const {
@@ -110,13 +110,9 @@ export default function UserModal({
   });
   // check the selected region
   const selectedRegion = watch("region");
-  const { data: districts, isLoading: districtsLoading } = useDistricts(); // fetch all districts
-   console.log("regioselen", selectedRegion)
-  // Filter districts by selected region on the client side
-  const filteredDistricts = selectedRegion
-  ? districts?.filter((d) => d.region?.id === selectedRegion)
-  : districts;
-  console.log("log", filteredDistricts)
+  const { data: districts, isLoading: districtsLoading } = useDistricts(selectedRegion); // fetch all districts
+  
+  console.log(selectedRegion, "regionid")
 
   // Ensure component is mounted on client before running effects
   useEffect(() => {
@@ -278,7 +274,7 @@ export default function UserModal({
         </DialogHeader>
         <form
           onSubmit={handleSubmit((data) => {
-            console.log("Form submitted with data:", data);
+            // console.log("Form submitted with data:", data);
             onSubmit(data);
           })}
           className="space-y-4 py-4"
@@ -418,7 +414,7 @@ export default function UserModal({
                     name="district"
                     control={control}
                     render={({ field }) => {
-                      const selectedDistrict = filteredDistricts?.find(
+                      const selectedDistrict = districts?.find(
                         (d) => d.id === field.value
                       );
                       return (
@@ -437,8 +433,8 @@ export default function UserModal({
                               <SelectItem value="loading" disabled>
                                 Loading districts...
                               </SelectItem>
-                            ) : filteredDistricts && filteredDistricts.length > 0 ? (
-                              filteredDistricts?.map((district) => (
+                            ) : districts && districts.length > 0 ? (
+                              districts.map((district) => (
                                 <SelectItem
                                   key={district.id}
                                   value={district.id}
