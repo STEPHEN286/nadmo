@@ -40,7 +40,7 @@ export default function ResetPasswordPage() {
 
   const mutation = useMutation({
     mutationFn: async ({ password }) => {
-      const res = await axios.post(`${BASE_URL}/auth/reset-password/`, {
+      const res = await axios.post(`${BASE_URL}/auth/set-password/`, {
         uid,
         token,
         new_password: password,
