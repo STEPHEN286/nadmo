@@ -6,7 +6,7 @@ import { BASE_URL } from "@/lib/utils";
 const postUser = async (userData) => {
   // console.log("postUser called with:", userData);
   try {
-    const response = await axios.post(`${BASE_URL}/users/`, userData);
+    const response = await axios.post(`${BASE_URL}/auth/invite/`, userData);
     return response.data;
   } catch (error) {
     const errorMessage = error.response?.data?.error || error.message || 'Failed to add user';

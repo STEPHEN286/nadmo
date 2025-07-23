@@ -108,7 +108,8 @@ export default function UserModal({
       status: "active",
     },
   });
-  // check the selected region
+  // Move role and selectedRegion declarations here, before any useEffect or hook that uses them
+  const role = watch("role");
   const selectedRegion = watch("region");
   const { data: districts, isLoading: districtsLoading } = useDistricts(selectedRegion); // fetch all districts
   
@@ -158,15 +159,31 @@ export default function UserModal({
           region:
             currentUserRole === "GES_REGIONAL_OFFICER"
               ? currentUserRegionId
+              : currentUserRole === "district_officer"
+              ? currentUserRegionId
               : "",
-          district: "",
-
+          district:
+            currentUserRole === "district_officer"
+              ? currentUserDistrictId
+              : "",
           password: "",
           status: "active",
         });
       }
     }
-  }, [open, editingUser, reset, mounted, currentUserRole, currentUserRegionId]);
+  }, [open, editingUser, reset, mounted, currentUserRole, currentUserRegionId, currentUserDistrictId]);
+
+  // Ensure region/district are set in form state for regional/district officer
+  useEffect(() => {
+    if (!mounted || !open) return;
+    if (currentUserRole === "regional_officer") {
+      setValue("region", currentUserRegionId);
+    }
+    if (currentUserRole === "district_officer") {
+      setValue("region", currentUserRegionId);
+      setValue("district", currentUserDistrictId);
+    }
+  }, [mounted, open, currentUserRole, currentUserRegionId, currentUserDistrictId, setValue]);
 
   // Reset district when region changes
   useEffect(() => {
@@ -175,6 +192,14 @@ export default function UserModal({
     }
   }, [selectedRegion, setValue, mounted]);
 
+  useEffect(() => {
+    if (!mounted || !open) return;
+    if (currentUserRole === "district_officer" && role === "reporter") {
+      setValue("region", currentUserRegionId);
+      setValue("district", currentUserDistrictId);
+    }
+  }, [mounted, open, currentUserRole, currentUserRegionId, currentUserDistrictId, role, setValue]);
+
   const onSubmit = async (data) => {
     console.log("form data", data);
 
@@ -182,13 +207,11 @@ export default function UserModal({
     const payload = {
       email: data.email,
       role: data.role.toLowerCase(),
-      profile: {
-        full_name: data.fullName,
-        phone_number: data.phone,
-        region: data.region || "",
-        district: data.district || "",
-      },
-      // Optionally add status or other fields if needed
+      full_name: data.fullName,
+      phone_number: data.phone,
+      region: data.region || "",
+      district: data.district || "",
+      // password: data.password || ""
     };
 
     try {
@@ -210,7 +233,6 @@ export default function UserModal({
     onOpenChange(false);
   };
 
-  const role = watch("role");
   const isLoading = addUserLoading || updateUserLoading;
 
   // Get available roles based on current user's role
@@ -360,10 +382,10 @@ export default function UserModal({
             </div>
           </div>
           {/* Location Assignment */}
-          {(role === ROLES[1] ||
-            role === ROLES[2] ||
-            role === ROLES[3]) && (
+          {/* Only admin sees region and district selects */}
+          {currentUserRole === "admin" && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Region Select */}
               <div className="space-y-2">
                 <Label htmlFor="region">Region *</Label>
                 <Controller
@@ -407,63 +429,74 @@ export default function UserModal({
                   </p>
                 )}
               </div>
-              {(role == ROLES[1] || role === ROLES[2] || role === ROLES[3]) && (
-                <div className="space-y-2">
-                  <Label htmlFor="district">District *</Label>
-                  <Controller
-                    name="district"
-                    control={control}
-                    render={({ field }) => {
-                      const selectedDistrict = districts?.find(
-                        (d) => d.id === field.value
-                      );
-                      return (
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value || ""}
-                          disabled={isLoading || districtsLoading}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select district">
-                              {selectedDistrict?.name || ""}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent className="max-h-60 overflow-y-auto">
-                            {districtsLoading ? (
-                              <SelectItem value="loading" disabled>
-                                Loading districts...
+              {/* District Select */}
+              <div className="space-y-2">
+                <Label htmlFor="district">District *</Label>
+                <Controller
+                  name="district"
+                  control={control}
+                  render={({ field }) => {
+                    const selectedDistrict = districts?.find(
+                      (d) => d.id === field.value
+                    );
+                    return (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || ""}
+                        disabled={isLoading || districtsLoading}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select district">
+                            {selectedDistrict?.name || ""}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60 overflow-y-auto">
+                          {districtsLoading ? (
+                            <SelectItem value="loading" disabled>
+                              Loading districts...
+                            </SelectItem>
+                          ) : districts && districts.length > 0 ? (
+                            districts.map((district) => (
+                              <SelectItem
+                                key={district.id}
+                                value={district.id}
+                              >
+                                {district?.name}
                               </SelectItem>
-                            ) : districts && districts.length > 0 ? (
-                              districts.map((district) => (
-                                <SelectItem
-                                  key={district.id}
-                                  value={district.id}
-                                >
-                                  {district?.name}
-                                </SelectItem>
-                              ))
-                            ) : selectedRegion ? (
-                              <SelectItem value="no-districts" disabled>
-                                No districts found
-                              </SelectItem>
-                            ) : (
-                              <SelectItem value="select-region-first" disabled>
-                                Select a region first
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      );
-                    }}
-                  />
-                  {errors.district && (
-                    <p className="text-sm text-red-500">
-                      {errors.district.message}
-                    </p>
-                  )}
-                </div>
-              )}
+                            ))
+                          ) : selectedRegion ? (
+                            <SelectItem value="no-districts" disabled>
+                              No districts found
+                            </SelectItem>
+                          ) : (
+                            <SelectItem value="select-region-first" disabled>
+                              Select a region first
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    );
+                  }}
+                />
+                {errors.district && (
+                  <p className="text-sm text-red-500">
+                    {errors.district.message}
+                  </p>
+                )}
+              </div>
             </div>
+          )}
+
+          {/* For regional officer, hide selects and set region in form state */}
+          {currentUserRole === "regional_officer" && (
+            <input type="hidden" {...register("region")} value={currentUserRegionId} />
+          )}
+          {/* For district officer, hide selects and set region and district in form state */}
+          {currentUserRole === "district_officer" && (
+            <>
+              <input type="hidden" {...register("region")} value={currentUserRegionId} />
+              <input type="hidden" {...register("district")} value={currentUserDistrictId} />
+            </>
           )}
 
           {/* Status */}

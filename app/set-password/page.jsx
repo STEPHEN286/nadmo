@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
-import { BASE_URL } from "@/lib/utils";
+import { useSetPassword } from "@/hooks/use-set-password";
 
 export default function SetPasswordPage() {
   const router = useRouter();
@@ -16,19 +14,7 @@ export default function SetPasswordPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const mutation = useMutation({
-    mutationFn: async ({ uid, token, password }) => {
-      const res = await axios.post(`${BASE_URL}/auth/set-password/`,{uid, token, password });
-      return res.data;
-    },
-    onSuccess: () => {
-      setSuccess("Password set successfully! You can now log in.");
-      setTimeout(() => router.push("/login"), 2000);
-    },
-    onError: (err) => {
-      setError(err?.response?.data?.message || err.message || "Failed to set password.");
-    },
-  });
+  const { setPassword: setPasswordMutation, isLoading, error: hookError, isSuccess } = useSetPassword();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -42,7 +28,18 @@ export default function SetPasswordPage() {
       setError("Passwords do not match.");
       return;
     }
-    mutation.mutate({ uid, token, password });
+    setPasswordMutation(
+      { uid, token, password },
+      {
+        onSuccess: () => {
+          setSuccess("Password set successfully! You can now log in.");
+          setTimeout(() => router.push("/login"), 2000);
+        },
+        onError: () => {
+          // handled by hookError
+        },
+      }
+    );
   };
 
   return (
@@ -69,14 +66,14 @@ export default function SetPasswordPage() {
             required
           />
         </div>
-        {error && <div className="text-red-600 text-sm">{error}</div>}
-        {success && <div className="text-green-600 text-sm">{success}</div>}
+        {(error || hookError) && <div className="text-red-600 text-sm">{error || hookError?.response?.data?.message || hookError?.message}</div>}
+        {(success || isSuccess) && <div className="text-green-600 text-sm">{success || "Password set successfully! You can now log in."}</div>}
         <button
           type="submit"
           className="w-full bg-red-600 text-white py-2 rounded font-semibold"
-          disabled={mutation.isPending}
+          disabled={isLoading}
         >
-          {mutation.isPending ? "Setting..." : "Set Password"}
+          {isLoading ? "Setting..." : "Set Password"}
         </button>
       </form>
     </div>

@@ -81,6 +81,7 @@ export default function UserManagementPage() {
 
   // Filter users based on role-based access control
   const filteredUsers = users?.filter((userItem) => {
+    console.log("userItem", userItem)
     // Search and status filters
     const matchesSearch =
       (userItem.profile?.full_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
@@ -100,13 +101,21 @@ export default function UserManagementPage() {
 
     if (userRole === "regional_officer") {
       // Regional Officer can see district officers and reporters in their assigned region
-      hasAccess = userItem.profile?.region === user.profile?.region && 
-                  (itemRole === "district_officer" || itemRole === "reporter")
+      hasAccess = (
+        (userItem.profile?.region?.id
+          ? userItem.profile.region.id === user.profile?.region?.id
+          : userItem.profile?.region === user.profile?.region)
+        && (itemRole === "district_officer" || itemRole === "reporter")
+      );
     }
     else if (userRole === "district_officer") {
       // District Officer can only see reporters in their assigned district
-      hasAccess = userItem.profile?.district === user.profile?.district && 
-                  itemRole === "reporter"
+      hasAccess = (
+        (userItem.profile?.district?.id
+          ? userItem.profile.district.id === user.profile?.district?.id
+          : userItem.profile?.district === user.profile?.district)
+        && itemRole === "reporter"
+      );
     }
     // Admin can see all users except other admins (for deletion purposes)
     else if (userRole === "admin") {
@@ -177,40 +186,39 @@ export default function UserManagementPage() {
     // Regional Officer can delete district officers and reporters in their region
     if (user?.role === "regional_officer") {
       // Can only delete users in their assigned region
-      if (targetUser.profile?.region !== user.profile?.region) {
-        return false
+      const sameRegion = targetUser.profile?.region?.id
+        ? targetUser.profile.region.id === user.profile?.region?.id
+        : targetUser.profile?.region === user.profile?.region;
+      if (!sameRegion) {
+        return false;
       }
       // Can only delete district officers and reporters
       if (targetUser.role !== "district_officer" && targetUser.role !== "reporter") {
-        return false
+        return false;
       }
-      return true
+      return true;
     }
 
     // District Officer can delete reporters in their district
     if (user?.role === "district_officer") {
       // Can only delete users in their assigned district
-      if (targetUser.profile?.district !== user.profile?.district) {
-        return false
+      const sameDistrict = targetUser.profile?.district?.id
+        ? targetUser.profile.district.id === user.profile?.district?.id
+        : targetUser.profile?.district === user.profile?.district;
+      if (!sameDistrict) {
+        return false;
       }
       // Can only delete reporters
       if (targetUser.role !== "reporter") {
-        return false
+        return false;
       }
-      return true
+      return true;
     }
 
     return false
   }
 
-  const handleResetPassword = (userId, userName) => {
-    if (confirm(`Reset password for ${userName}? They will receive an email with a new temporary password.`)) {
-      toast({
-        title: "Password reset",
-        description: `Password reset email sent to ${userName}.`,
-      })
-    }
-  }
+
 
   const getRoleBadge = (role) => {
     const variants = {
@@ -266,7 +274,14 @@ export default function UserManagementPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-6 gap-4">
+        <div className={
+          user?.role === ROLES[0]
+            ? "grid grid-cols-6 gap-4"
+            : user?.role === ROLES[1]
+            ? "grid grid-cols-4 gap-4"
+            : "grid grid-cols-3 gap-4"
+        }>
+          {/* Total and Active are shown to all */}
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -291,58 +306,69 @@ export default function UserManagementPage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-600">Admins</p>
-                  <p className="text-lg font-bold text-purple-600">
-                    {filteredUsers?.filter((u) => u.role === "admin").length || 0}
-                  </p>
+          {/* Admin only cards */}
+          {user?.role === ROLES[0] && (
+            <>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-gray-600">Admins</p>
+                      <p className="text-lg font-bold text-purple-600">
+                        {filteredUsers?.filter((u) => u.role === "admin").length || 0}
+                      </p>
+                    </div>
+                    <Key className="h-6 w-6 text-purple-600" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-gray-600">Regional</p>
+                      <p className="text-lg font-bold text-orange-600">
+                        {filteredUsers?.filter((u) => u.role === ROLES[1]).length || 0}
+                      </p>
+                    </div>
+                    <MapPin className="h-6 w-6 text-orange-600" />
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+          {/* Admin and Regional Officer: District */}
+          {(user?.role === ROLES[0] || user?.role === ROLES[1]) && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-gray-600">District</p>
+                    <p className="text-lg font-bold text-orange-600">
+                      {filteredUsers?.filter((u) => u.role === ROLES[2]).length || 0}
+                    </p>
+                  </div>
+                  <MapPin className="h-6 w-6 text-orange-600" />
                 </div>
-                <Key className="h-6 w-6 text-purple-600" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-600">Regional</p>
-                  <p className="text-lg font-bold text-orange-600">
-                    {filteredUsers?.filter((u) => u.role === ROLES[1]).length || 0}
-                  </p>
+              </CardContent>
+            </Card>
+          )}
+          {/* All roles except admin: Reporter */}
+          {(user?.role === ROLES[0] || user?.role === ROLES[1] || user?.role === ROLES[2]) && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-gray-600">Reporter</p>
+                    <p className="text-lg font-bold text-orange-600">
+                      {filteredUsers?.filter((u) => u.role === ROLES[3]).length || 0}
+                    </p>
+                  </div>
+                  <MapPin className="h-6 w-6 text-orange-600" />
                 </div>
-                <MapPin className="h-6 w-6 text-orange-600" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-600">District</p>
-                  <p className="text-lg font-bold text-orange-600">
-                    {filteredUsers?.filter((u) => u.role === ROLES[2]).length || 0}
-                  </p>
-                </div>
-                <MapPin className="h-6 w-6 text-orange-600" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-600">Reporter</p>
-                  <p className="text-lg font-bold text-orange-600">
-                    {filteredUsers?.filter((u) => u.role === ROLES[3]).length || 0}
-                  </p>
-                </div>
-                <MapPin className="h-6 w-6 text-orange-600" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Filters and Search */}
@@ -368,7 +394,19 @@ export default function UserManagementPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
-                  {ROLES.map(role => (
+                  {/* Role-based filter options */}
+                  {user?.role === ROLES[0] &&
+                    ROLES.map(role => (
+                      <SelectItem key={role} value={role}>
+                        {role.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
+                      </SelectItem>
+                    ))}
+                  {user?.role === ROLES[1] && [ROLES[2], ROLES[3]].map(role => (
+                    <SelectItem key={role} value={role}>
+                      {role.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
+                    </SelectItem>
+                  ))}
+                  {user?.role === ROLES[2] && [ROLES[3]].map(role => (
                     <SelectItem key={role} value={role}>
                       {role.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
                     </SelectItem>
@@ -431,9 +469,8 @@ export default function UserManagementPage() {
                           {!user.profile?.region && !user.profile?.district && <span className="text-gray-400">N/A</span>}
                         </div>
                       </TableCell>
-                      {/* <TableCell>{getStatusBadge(user.is_active)}</TableCell> */}
                       <TableCell>
-                        <span className="text-sm text-gray-600">{new Date(user.last_login).toLocaleDateString()}</span>
+                        <span className="text-sm text-gray-600">{getStatusBadge(user.is_active)}</span>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">

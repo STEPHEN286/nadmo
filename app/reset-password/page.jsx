@@ -43,7 +43,7 @@ export default function ResetPasswordPage() {
       const res = await axios.post(`${BASE_URL}/auth/set-password/`, {
         uid,
         token,
-        new_password: password,
+        password: password,
       });
       return res.data;
     },
