@@ -312,9 +312,10 @@ export default function ReportViewPage() {
                 </div>
               </CardContent>
             </Card>
-
+                
+                {/* {console.log('report.images', report.images)} */}
             {/* Photos */}
-            <PhotoGridCard photos={report.photo} />
+            <PhotoGridCard images={report.images} />
 
             {/* Timeline */}
             <Card>

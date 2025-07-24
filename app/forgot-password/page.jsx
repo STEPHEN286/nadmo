@@ -123,7 +123,7 @@ export default function ForgotPasswordPage() {
                         Email Address
                       </Label>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Mail className="absolute left-3 top-4 h-4 w-4 text-gray-400" />
                         <Input
                           id="email"
                           type="email"
@@ -156,8 +156,8 @@ export default function ForgotPasswordPage() {
                     <div className="text-center mt-4">
                       <button
                         type="button"
-                        className="text-sm text-gray-600 hover:text-gray-800"
-                        onClick={() => router.push('/login/edu-track')}
+                        className="text-sm cursor-pointer text-gray-600 hover:text-gray-800"
+                        onClick={() => router.push('/login')}
                       >
                         Back to Login
                       </button>

@@ -111,6 +111,7 @@ export function useAuth() {
     onError: (error) => {
       toast({
         variant: "destructive",
+        className: "bg-red-500 text-white",
         title: "Login Failed",
         description: error?.response?.data?.error || "Invalid credentials",
       });
