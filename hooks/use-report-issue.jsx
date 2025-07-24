@@ -4,13 +4,15 @@ import { toast } from "./use-toast.jsx";
 import { BASE_URL } from "@/lib/utils.js";
 import { useRouter } from "next/navigation.js";
 import { useReporterAuth } from "@/hooks/use-reporter-auth";
+import { buildFormData } from "@/lib/buid-form-data.js";
 
 
 // Replace with your actual API endpoint
 
 const postReport = async (reportData) => {
-  console.log("report", reportData)
-  const response = await axios.post(`${BASE_URL}/reports/`, reportData, 
+  const formData = buildFormData(reportData);
+  console.log("report", formData)
+  const response = await axios.post(`${BASE_URL}/reports/`, formData, 
    { headers: {
       'Content-Type': 'multipart/form-data'
     }}
@@ -33,7 +35,7 @@ export default function useReportIssue() {
         title: "Report submitted",
         description: "Your report has been successfully submitted.",
       });
-      router.push(`/emergency/report-confirmation?id=${data.data.id}`);
+      router.push(`/emergency/report-confirmation?id=${data.data.custom_tracking_id}`);
     },
     onError: (error) => {
       toast({

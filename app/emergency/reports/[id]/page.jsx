@@ -23,6 +23,8 @@ import { BASE_URL } from "@/lib/utils";
 import ReportForm from "@/components/ReportForm";
 import useReportIssue, { useUpdateReport } from "@/hooks/use-report-issue";
 import { useViewReport } from "@/hooks/use-user-reports";
+import ImagePreviewModal from "@/components/ImagePreviewModal";
+import PhotoGridCard from "@/components/PhotoGridCard";
 
 const reportSchema = z.object({
   disaster_type: z.string().min(1, "Emergency type is required"),
@@ -43,6 +45,16 @@ export default function EditReportPage() {
   const updateReport = useUpdateReport();
   const { data: report, isLoading: loading, error } = useViewReport(params.id);
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalImg, setModalImg] = useState(null);
+
+  // Normalize photo(s) to array for consistent preview logic
+  const photoArray = Array.isArray(report?.photo)
+    ? report.photo
+    : report?.photo
+      ? [report.photo]
+      : [];
+      console.log('photoArray', photoArray)
   // Permission check
   const canEdit = user && report && user.id === report.reporter?.id && report.status === "pending";
 
@@ -130,21 +142,7 @@ export default function EditReportPage() {
               <>
                 {/* View-only info section */}
                 <div className="mb-6">
-                  {Array.isArray(report.photo) && report.photo.length > 0 && (
-                    <div className="mb-2">
-                      <div className="font-semibold mb-1">Photo(s):</div>
-                      <div className="flex flex-wrap gap-2">
-                        {report.photo.map((img, idx) => (
-                          <img
-                            key={idx}
-                            src={typeof img === 'string' ? img : URL.createObjectURL(img)}
-                            alt={`Report photo ${idx + 1}`}
-                            className="w-24 h-24 object-cover rounded border"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <PhotoGridCard photos={report.photo} />
                   {report.are_people_hurt && (
                     <div className="mb-1 text-sm font-medium text-red-700">Are people hurt: <span className="font-bold">Yes</span></div>
                   )}

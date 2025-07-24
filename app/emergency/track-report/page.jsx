@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,6 +13,7 @@ import { BackButton } from "@/components/ui/back-button"
 import { useRouter } from "next/navigation"
 import useTrackReport from "@/hooks/use-track-report";
 import { severityConfig, disasterTypes } from "@/lib/disaster-data"
+import ImagePreviewModal from "@/components/ImagePreviewModal";
 
 // Local status config for backend statuses
 const statusConfig = {
@@ -49,6 +50,19 @@ export default function TrackReportPage() {
   const router = useRouter();
 
   const { data: searchResult, isLoading, isError } = useTrackReport(reportId);
+
+  console.log("searchResult", searchResult)
+
+  // Modal state for image preview
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalImg, setModalImg] = useState(null);
+
+  // Normalize photo(s) to array
+  const photoArray = Array.isArray(searchResult?.photo)
+    ? searchResult.photo
+    : searchResult?.photo
+      ? [searchResult.photo]
+      : [];
 
   const handleSearch = () => {
     if (!inputId.trim()) {
@@ -240,6 +254,34 @@ export default function TrackReportPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Photo Grid with Modal Preview */}
+            {photoArray.length > 0 && (
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Photo{photoArray.length > 1 ? "s" : ""}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {photoArray.map((img, idx) => (
+                        <img
+                          key={idx}
+                          src={typeof img === "string" ? img : URL.createObjectURL(img)}
+                          alt={`Report photo ${idx + 1}`}
+                          className="w-24 h-24 object-cover rounded border cursor-pointer"
+                          onClick={() => {
+                            setModalImg(typeof img === "string" ? img : URL.createObjectURL(img));
+                            setModalOpen(true);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+                <ImagePreviewModal open={modalOpen} onClose={() => setModalOpen(false)} img={modalImg} />
+              </>
+            )}
 
             {/* Status Timeline */}
             {/* <Card>

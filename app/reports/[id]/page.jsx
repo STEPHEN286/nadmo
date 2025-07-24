@@ -46,6 +46,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/use-auth";
 import StatusUpdateModal from "@/components/StatusUpdateModal";
+import PhotoGridCard from "@/components/PhotoGridCard";
 
 // Hook to fetch individual report
 const useReport = (reportId) => {
@@ -103,6 +104,7 @@ export default function ReportViewPage() {
   const reportId = params.id
 
   const { data: report, isLoading, error } = useReport(reportId)
+  console.log("reportvie", report)
   const { user } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [statusEditOpen, setStatusEditOpen] = useState(false);
@@ -312,36 +314,7 @@ export default function ReportViewPage() {
             </Card>
 
             {/* Photos */}
-            {report.photo && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Camera className="h-5 w-5" />
-                    <span>Photos</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {Array.isArray(report.photo) ? (
-                      report.photo.map((photo, index) => (
-                        <div key={index} className="relative">
-                          <img
-                            src={photo}
-                            alt={`Report photo ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-lg border"
-                          />
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <Camera className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                        <p>No photos available</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            <PhotoGridCard photos={report.photo} />
 
             {/* Timeline */}
             <Card>
