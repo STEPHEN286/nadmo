@@ -20,19 +20,7 @@ import * as z from "zod";
 import { disasterTypes } from "@/lib/disaster-data";
 import { useReporterAuth } from "@/hooks/use-reporter-auth";
 import { useToast } from "@/hooks/use-toast";
-
-const reportSchema = z.object({
-  disaster_type: z.string().min(1, "Emergency type is required"),
-  location_description: z.string().min(1, "Location is required"),
-  gps_coordinates: z.string().optional(),
-  severity_level: z.string().min(1, "Severity level is required"),
-//   number_injured: z.string().optional(),
-description: z.string().optional(),
-  are_people_hurt: z.boolean(),
-  photo: z.array(z.any()).optional(),
-  full_name: z.string().optional(),
-  phone_number: z.string().optional(),
-});
+import { reportSchema } from "@/lib/utils";
 
 const safeString = (val) => (typeof val === "string" ? val : "");
 const safeBool = (val) => (typeof val === "boolean" ? val : false);
@@ -71,13 +59,13 @@ export default function ReportForm({
     //   number_injured: safeString(initialValues.number_injured),
     description: safeString(initialValues.description),
       are_people_hurt: safeBool(initialValues.are_people_hurt),
-      photo: safeArray(initialValues.photo),
+      uploaded_images: safeArray(initialValues.uploaded_images),
       full_name: safeString(initialValues.full_name),
       phone_number: safeString(initialValues.phone_number),
     },
   });
   const { handleSubmit, control, setValue, watch, formState: { errors } } = form;
-  const watchedImages = watch("photo");
+  const watchedImages = watch("uploaded_images");
   const watchedDisasterType = watch("disaster_type");
 
   // Update form values when initialValues change (for edit mode)
@@ -106,42 +94,42 @@ export default function ReportForm({
     setShowCamera(false);
     setCameraReady(false);
   };
-  const capturePhoto = () => {
-    if (videoRef.current && cameraReady) {
-      const canvas = document.createElement('canvas');
-      const video = videoRef.current;
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => {
-        if (blob && blob.size > 0) {
-          const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
-          const currentPhotos = watchedImages || [];
-          setValue("photo", [...currentPhotos, file]);
-          stopCamera();
-        } else {
-          alert("Photo capture failed");
-        }
-      }, 'image/jpeg', 0.8);
-    }
-  };
+  // const capturePhoto = () => {
+  //   if (videoRef.current && cameraReady) {
+  //     const canvas = document.createElement('canvas');
+  //     const video = videoRef.current;
+  //     canvas.width = video.videoWidth || 640;
+  //     canvas.height = video.videoHeight || 480;
+  //     const ctx = canvas.getContext('2d');
+  //     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  //     canvas.toBlob((blob) => {
+  //       if (blob && blob.size > 0) {
+  //         const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+  //         const currentPhotos = watchedImages || [];
+  //         setValue("images", [...currentPhotos, file]);
+  //         stopCamera();
+  //       } else {
+  //         alert("Photo capture failed");
+  //       }
+  //     }, 'image/jpeg', 0.8);
+  //   }
+  // };
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     const validFiles = files.filter(file => file.size > 0 && file.type.startsWith('image/'));
     if (validFiles.length > 0) {
-      setValue("photo", [...(watchedImages || []), ...validFiles]);
+      setValue("uploaded_images", [...(watchedImages || []), ...validFiles]);
     }
   };
   const removeImage = (index) => {
-    setValue("photo", (watchedImages || []).filter((_, i) => i !== index));
+    setValue("uploaded_images", (watchedImages || []).filter((_, i) => i !== index));
   };
   // Clean up empty files from the state
   const cleanupEmptyFiles = () => {
     const currentPhotos = watchedImages || [];
     const validPhotos = currentPhotos.filter(file => file && file.size > 0);
     if (validPhotos.length !== currentPhotos.length) {
-      setValue("photo", validPhotos);
+      setValue("uploaded_images", validPhotos);
     }
   };
   useEffect(() => { cleanupEmptyFiles(); }, [watchedImages]);
@@ -354,7 +342,7 @@ export default function ReportForm({
         {/* Photo Upload */}
         <FormField
           control={control}
-          name="photo"
+          name="uploaded_images"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Photos (Helpful but Optional)</FormLabel>
