@@ -47,7 +47,8 @@ export default function useReportIssue() {
 }
 
 const updateReport = async ({ id, data }) => {
-  const response = await axios.put(`${BASE_URL}/reports/${id}/`, data,  { headers: {
+  const formData = buildFormData(data);
+  const response = await axios.put(`${BASE_URL}/reports/${id}/`, formData,  { headers: {
     'Content-Type': 'multipart/form-data'
   }});
   return response.data;

@@ -48,6 +48,9 @@ export default function ReportForm({
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  // State for existing images
+  const [existingImages, setExistingImages] = useState(Array.isArray(initialValues.images) ? initialValues.images : []);
+
   // Setup form
   const form = useForm({
     resolver: zodResolver(reportSchema),
@@ -56,10 +59,9 @@ export default function ReportForm({
       location_description: safeString(initialValues.location_description),
       gps_coordinates: safeString(initialValues.gps_coordinates),
       severity_level: safeString(initialValues.severity_level) || "minor",
-    //   number_injured: safeString(initialValues.number_injured),
-    description: safeString(initialValues.description),
+      description: safeString(initialValues.description),
       are_people_hurt: safeBool(initialValues.are_people_hurt),
-      uploaded_images: safeArray(initialValues.uploaded_images),
+      uploaded_images: [], // Only new images
       full_name: safeString(initialValues.full_name),
       phone_number: safeString(initialValues.phone_number),
     },
@@ -134,9 +136,26 @@ export default function ReportForm({
   };
   useEffect(() => { cleanupEmptyFiles(); }, [watchedImages]);
 
+  // Remove new image
+  const removeNewImage = (index) => {
+    setValue("uploaded_images", (watchedImages || []).filter((_, i) => i !== index));
+  };
+  // Remove existing image
+  const removeExistingImage = (id) => {
+    setExistingImages((imgs) => imgs.filter((img) => img.id !== id));
+  };
+
+  // On submit, only send new images
+  const handleFormSubmit = (data) => {
+    onSubmit({
+      ...data,
+      uploaded_images: data.uploaded_images || [],
+    });
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
         {/* Emergency Type */}
         <FormField
           control={control}
@@ -347,6 +366,25 @@ export default function ReportForm({
             <FormItem>
               <FormLabel>Photos (Helpful but Optional)</FormLabel>
               <div className="flex flex-wrap gap-4 items-center">
+                {/* Existing images from server */}
+                {existingImages.map((img, idx) => (
+                  <div key={img.id || idx} className="relative group">
+                    <img
+                      src={img.image}
+                      alt={`Report photo ${idx + 1}`}
+                      className="w-24 h-24 object-cover rounded-lg border"
+                    />
+                    <button
+                      type="button"
+                      className="absolute top-1 right-1 bg-white bg-opacity-80 rounded-full p-1 text-xs text-red-600 group-hover:bg-opacity-100 z-10"
+                      onClick={() => removeExistingImage(img.id)}
+                      title="Delete image"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+                {/* New images (not yet uploaded) */}
                 {Array.isArray(watchedImages) && watchedImages.length > 0 && watchedImages.map((file, idx) => (
                   <div key={idx} className="relative group">
                     <img
@@ -356,13 +394,15 @@ export default function ReportForm({
                     />
                     <button
                       type="button"
-                      className="absolute top-1 right-1 bg-white bg-opacity-80 rounded-full p-1 text-xs text-red-600 group-hover:bg-opacity-100"
-                      onClick={() => removeImage(idx)}
+                      className="absolute top-1 right-1 bg-white bg-opacity-80 rounded-full p-1 text-xs text-red-600 group-hover:bg-opacity-100 z-10"
+                      onClick={() => removeNewImage(idx)}
+                      title="Delete image"
                     >
                       &times;
                     </button>
                   </div>
                 ))}
+                {/* Add photo/upload/camera buttons */}
                 <Button
                   type="button"
                   variant="outline"

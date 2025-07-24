@@ -57,6 +57,7 @@ import Link from "next/link";
 import ReporterViewReportModalContent from "@/components/ReporterViewReportModalContent";
 import { useProfile } from "@/hooks/use-user-profile"
 import ReporterSettings from "@/components/layout/reporter-settings";
+import PhotoGridCard from "@/components/PhotoGridCard";
 
 // Move this hook to the top-level so it is accessible everywhere in the file
 function useReporterViewReport(id) {
@@ -365,6 +366,13 @@ export default function ProfilePage() {
                         {reports.map((report) => {
                           const isReporter = user && report && user.id === report.reporter?.id;
                           const canEdit = isReporter && report.status === "pending";
+                          // Normalize report.photo to array of objects with 'image' property for PhotoGridCard
+                          let images = [];
+                          if (Array.isArray(report.photo)) {
+                            images = report.photo.map((img) => typeof img === 'string' ? { image: img } : img);
+                          } else if (report.photo) {
+                            images = [{ image: report.photo }];
+                          }
                           return (
                             <Card key={report.id} className="border-l-4 border-l-red-500">
                               <CardContent className="p-4">
@@ -397,6 +405,12 @@ export default function ProfilePage() {
                                           </span>
                                         </span>
                                       </div>
+                                      {/* Add PhotoGridCard for report images */}
+                                      {images.length > 0 && (
+                                        <div className="mt-2">
+                                          <PhotoGridCard images={images} title="Report Photo(s)" />
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                   <div className="flex space-x-2">

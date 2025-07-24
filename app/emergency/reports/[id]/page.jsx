@@ -142,7 +142,9 @@ export default function EditReportPage() {
               <>
                 {/* View-only info section */}
                 <div className="mb-6">
-                  <PhotoGridCard photos={report.photo} />
+                  {Array.isArray(report.images) && report.images.length > 0 && (
+                    <PhotoGridCard images={report.images} />
+                  )}
                   {report.are_people_hurt && (
                     <div className="mb-1 text-sm font-medium text-red-700">Are people hurt: <span className="font-bold">Yes</span></div>
                   )}

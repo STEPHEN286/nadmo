@@ -11,6 +11,7 @@ import axios from "axios";
 import { disasterTypes, severityConfig } from "@/lib/disaster-data";
 
 import { useViewReport } from "@/hooks/use-user-reports";
+import PhotoGridCard from "./PhotoGridCard";
 
 const reportSchema = z.object({
   disaster_type: z.string().min(1, "Emergency type is required"),
@@ -148,22 +149,11 @@ export default function ReporterViewReportModalContent({ reportId }) {
         <AlertTriangle className="h-4 w-4 text-gray-500" />
         <span className={`px-2 py-1 rounded text-xs font-semibold ${severityCfg.bgColor || "bg-gray-100"} ${severityCfg.textColor || "text-gray-700"}`}>{severityCfg.label || severity}</span>
       </div>
-      {/* Custom view-only info */}
-      {Array.isArray(report.photo) && report.photo.length > 0 && (
-        <div className="mb-2">
-          <div className="font-semibold mb-1">Photo(s):</div>
-          <div className="flex flex-wrap gap-2">
-            {report.photo.map((img, idx) => (
-              <img
-                key={idx}
-                src={typeof img === 'string' ? img : URL.createObjectURL(img)}
-                alt={`Report photo ${idx + 1}`}
-                className="w-24 h-24 object-cover rounded border"
-              />
-            ))}
-          </div>
-        </div>
+      {/* PhotoGridCard for images */}
+      {Array.isArray(report.images) && report.images.length > 0 && (
+        <PhotoGridCard images={report.images} title="Report Photo(s)" />
       )}
+      {/* Custom view-only info */}
       {report.are_people_hurt && (
         <div className="mb-1 text-sm font-medium text-red-700">Are people hurt: <span className="font-bold">Yes</span></div>
       )}
