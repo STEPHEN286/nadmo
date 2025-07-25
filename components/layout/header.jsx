@@ -32,14 +32,14 @@ export function Header({ onLogout }) {
                   Welcome back, {user?.name?.split(" ")[0]}
                 </h2>
                 <div className="flex items-center space-x-1 sm:space-x-1.5 mt-0.5 flex-wrap">
-                  {user?.assignedRegion?.name && (
+                  {user?.profile?.region?.name && (
                     <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 h-3 sm:h-4">
-                      {user.assignedRegion.name} Region
+                      {user.profile.region.name} Region
                     </Badge>
                   )}
-                  {user?.assignedDistrict?.name && (
+                  {user?.profile?.district?.name && (
                     <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 h-3 sm:h-4">
-                      {user.assignedDistrict.name} District
+                      {user.profile.district.name} District
                     </Badge>
                   )}
                   <Badge

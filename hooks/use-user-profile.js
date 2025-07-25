@@ -15,9 +15,11 @@ const fetchUserProfile = async () => {
   }
 };
 
-const updateUserProfile = async (profileData) => {
+const updateUserProfile = async ({ userId, profileData }) => {
+
+  const endpoint = `${BASE_URL}/users/${userId}/`;
   try {
-    const response = await axios.put(PROFILE_ENDPOINT, profileData);
+    const response = await axios.patch(endpoint, profileData);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.error || error.message);

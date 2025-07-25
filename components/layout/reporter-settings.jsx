@@ -1,38 +1,56 @@
 import { useState, useEffect } from "react";
 import { useProfile } from "@/hooks/use-user-profile";
+import { useReporterAuth } from "@/hooks/use-reporter-auth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useRegions } from "@/hooks/use-regions";
+import { useDistricts } from "@/hooks/use-districts";
 
 export default function ReporterSettings() {
+  const { user } = useReporterAuth();
   const { profile, isProfileLoading, profileError, updateProfile, isUpdating } = useProfile();
+  const { data: regions, isPending: regionsLoading } = useRegions();
+  const [selectedRegion, setSelectedRegion] = useState(profile?.region?.id || "");
+  const { data: districts, isLoading: districtsLoading } = useDistricts(selectedRegion);
   const [editForm, setEditForm] = useState({
-    phone_number: "",
-    region: { id: "", name: "" },
-    district: { id: "", name: "", region: { id: "", name: "" } },
+    full_name: profile?.full_name || "",
+    email: profile?.email || "",
+    phone_number: profile?.phone_number || "",
+    region: profile?.region?.id || "",
+    district: profile?.district?.id || "",
   });
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (profile) {
       setEditForm({
+        full_name: profile.full_name || "",
+        email: profile.email || "",
         phone_number: profile.phone_number || "",
-        region: profile.region || { id: "", name: "" },
-        district: profile.district || { id: "", name: "", region: { id: "", name: "" } },
+        region: profile.region?.id || "",
+        district: profile.district?.id || "",
       });
+      setSelectedRegion(profile.region?.id || "");
     }
   }, [profile]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setEditForm((prev) => ({ ...prev, [name]: value }));
+    if (name === "region") {
+      setSelectedRegion(value);
+      setEditForm((prev) => ({ ...prev, district: "" }));
+    }
   };
 
   const handleSave = (e) => {
     e.preventDefault();
-    updateProfile(editForm);
+    if (user?.id) {
+      updateProfile({ userId: user.id, profileData: editForm });
+    }
     setIsEditing(false);
   };
 
@@ -57,12 +75,24 @@ export default function ReporterSettings() {
       <CardContent className="space-y-4">
         <form onSubmit={handleSave} className="space-y-4">
           <div className="space-y-2">
-            <Label>Full Name</Label>
-            <Input value={profile.full_name || ""} readOnly disabled />
+            <Label htmlFor="full_name">Full Name</Label>
+            <Input
+              id="full_name"
+              name="full_name"
+              value={editForm.full_name}
+              onChange={handleChange}
+              placeholder="Enter your full name"
+              disabled={isUpdating}
+            />
           </div>
           <div className="space-y-2">
-            <Label>Email</Label>
-            <Input value={profile.email || ""} readOnly disabled />
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              name="email"
+              value={editForm.email}
+             
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone_number">Phone Number</Label>
@@ -77,25 +107,35 @@ export default function ReporterSettings() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="region">Region</Label>
-            <Input
+            <select
               id="region"
               name="region"
-              value={editForm.region?.name || ""}
-              onChange={(e) => setEditForm((prev) => ({ ...prev, region: { ...prev.region, name: e.target.value } }))}
-              placeholder="Enter your region"
-              disabled={isUpdating}
-            />
+              value={editForm.region}
+              onChange={handleChange}
+              className="mt-1 w-full border rounded px-2 py-2"
+              disabled={regionsLoading || isUpdating}
+            >
+              <option value="">Select region</option>
+              {regions && regions.length > 0 && regions.map((region) => (
+                <option key={region.id} value={region.id}>{region.name}</option>
+              ))}
+            </select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="district">District</Label>
-            <Input
+            <select
               id="district"
               name="district"
-              value={editForm.district?.name || ""}
-              onChange={(e) => setEditForm((prev) => ({ ...prev, district: { ...prev.district, name: e.target.value, region: prev.region } }))}
-              placeholder="Enter your district"
-              disabled={isUpdating}
-            />
+              value={editForm.district}
+              onChange={handleChange}
+              className="mt-1 w-full border rounded px-2 py-2"
+              disabled={districtsLoading || !editForm.region || isUpdating}
+            >
+              <option value="">Select district</option>
+              {districts && districts.length > 0 && districts.map((district) => (
+                <option key={district.id} value={district.id}>{district.name}</option>
+              ))}
+            </select>
           </div>
           <div className="flex space-x-2">
             <Button type="submit" disabled={isUpdating} className="flex-1">

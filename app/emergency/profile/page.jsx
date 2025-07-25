@@ -107,7 +107,7 @@ export default function ProfilePage() {
 
   // Redirect if not authenticated (only after auth hook has mounted)
   useEffect(() => {
-    // console.log("ProfilePage: useEffect triggered, user:", user, "mounted:", mounted)
+   
     if (mounted && !user) {
       // console.log("ProfilePage: No user found after mount, redirecting to login")
       router.push("/emergency/")
@@ -149,37 +149,11 @@ export default function ProfilePage() {
     };
   }, [refetch]);
 
-  const handleEditProfile = () => {
-    setIsEditing(true)
-  }
 
-  const handleSaveProfile = async () => {
-    try {
-      // TODO: Replace with actual API call
-      // await axios.put(`${BASE_URL}/profile/update`, editForm)
-      
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been updated successfully",
-      })
-      setIsEditing(false)
-    } catch (error) {
-      toast({
-        title: "Update Failed",
-        description: "Failed to update your profile",
-        variant: "destructive",
-      })
-    }
-  }
 
-  const handleCancelEdit = () => {
-    setEditForm({
-      phone_number: user.profile?.phone_number || "",
-      region: user.profile?.region || "",
-      district: user.profile?.district || "",
-    })
-    setIsEditing(false)
-  }
+  
+
+  
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -463,15 +437,7 @@ export default function ProfilePage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium">Email Notifications</h4>
-                        <p className="text-sm text-gray-600">Receive updates about your reports</p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Configure
-                      </Button>
-                    </div>
+                    
                     <Separator />
                     <div className="flex items-center justify-between">
                       <div>

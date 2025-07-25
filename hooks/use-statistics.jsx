@@ -150,7 +150,7 @@ const fetchStatistics = async () => {
         });
         
         const reports = reportsResponse.data?.results || [];
-        console.log("Fallback reports data:", reports);
+        // console.log("Fallback reports data:", reports);
         
         const fallbackStats = calculateFallbackStatistics(reports);
         console.log("Calculated fallback statistics:", fallbackStats);
