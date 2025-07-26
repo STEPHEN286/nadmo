@@ -126,6 +126,34 @@ export default function UserModal({
     if (open) {
       if (editingUser) {
         // Edit mode - populate form with user data
+        console.log("Editing user data:", editingUser);
+        const regionValue = editingUser.profile?.region ||
+          editingUser.region ||
+          editingUser.assignedRegion?.id ||
+          "";
+        const districtValue = editingUser.profile?.district ||
+          editingUser.district ||
+          editingUser.assignedDistrict?.id ||
+          "";
+        // Handle cases where region/district might be objects with id properties
+        const getRegionId = (region) => {
+          if (typeof region === 'string') return region;
+          if (region && typeof region === 'object' && region.id) return region.id;
+          return "";
+        };
+        
+        const getDistrictId = (district) => {
+          if (typeof district === 'string') return district;
+          if (district && typeof district === 'object' && district.id) return district.id;
+          return "";
+        };
+        
+        const finalRegionValue = getRegionId(regionValue);
+        const finalDistrictValue = getDistrictId(districtValue);
+        console.log("Setting region to:", regionValue);
+        console.log("Setting district to:", districtValue);
+        console.log("Final region ID:", finalRegionValue);
+        console.log("Final district ID:", finalDistrictValue);
         reset({
           fullName:
             editingUser.profile?.full_name ||
@@ -135,16 +163,8 @@ export default function UserModal({
           email: editingUser.email || "",
           phone: editingUser.profile?.phone_number || editingUser.phone || "",
           role: editingUser.role || "",
-          region:
-            editingUser.profile?.region ||
-            editingUser.region ||
-            editingUser.assignedRegion?.id ||
-            "",
-          district:
-            editingUser.profile?.district ||
-            editingUser.district ||
-            editingUser.assignedDistrict?.id ||
-            "",
+          region: finalRegionValue,
+          district: finalDistrictValue,
           password: "",
           status:
             editingUser.status || editingUser.is_active ? "active" : "inactive",
@@ -188,9 +208,12 @@ export default function UserModal({
   // Reset district when region changes
   useEffect(() => {
     if (mounted) {
-      setValue("district", "");
+      // Only reset district when adding a new user, not when editing
+      if (!editingUser) {
+        setValue("district", "");
+      }
     }
-  }, [selectedRegion, setValue, mounted]);
+  }, [selectedRegion, setValue, mounted, editingUser]);
 
   useEffect(() => {
     if (!mounted || !open) return;
@@ -201,17 +224,16 @@ export default function UserModal({
   }, [mounted, open, currentUserRole, currentUserRegionId, currentUserDistrictId, role, setValue]);
 
   const onSubmit = async (data) => {
-    const selectedRegionObj = regions?.find(r => r.id === data.region) || {};
-    const selectedDistrictObj = districts?.find(d => d.id === data.district) || {};
-
-    // Build profile for both
+    // Use only IDs for region and district in profile
     const profile = {
       full_name: data.fullName,
       phone_number: data.phone,
-      region: selectedRegionObj,
+      region_id: data.region, // region ID only
     };
     if ((data.role === "district_officer" || data.role === "reporter") && data.district) {
-      profile.district = selectedDistrictObj;
+      profile.district_id = data.district; 
+    } else {
+      profile.district_id = null;
     }
 
     // Add User Payload (flat, no profile)
@@ -227,8 +249,9 @@ export default function UserModal({
       addPayload.district = data.district;
     }
 
-    // Update User Payload (keep previous logic)
+    // Update User Payload (now with only IDs for region and district)
     const updatePayload = {
+      email: data.email,
       role: data.role,
       is_staff: data.role !== "reporter",
       is_active: data.status === "active",
@@ -260,7 +283,8 @@ export default function UserModal({
   const getAvailableRoles = () => {
     const role = (currentUserRole || "").toLowerCase();
     if (role === "admin") {
-      return ROLES;
+      // Remove 'admin' from the dropdown for admin users
+      return ROLES.filter(r => r !== "admin");
     } else if (role === "regional_officer") {
       return ["district_officer", "reporter"];
     } else if (role === "district_officer") {
@@ -380,6 +404,20 @@ export default function UserModal({
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
+                      {/* Always show the current value if editing, even if not in availableRoles */}
+                      {editingUser && field.value && !availableRoles.includes(field.value) && (
+                        <SelectItem key={field.value} value={field.value}>
+                          {(() => {
+                            const roleLabels = {
+                              admin: "Admin",
+                              regional_officer: "Regional Officer",
+                              district_officer: "District Officer",
+                              reporter: "Field Reporter",
+                            };
+                            return roleLabels[field.value] || field.value;
+                          })()}
+                        </SelectItem>
+                      )}
                       {availableRoles.map((role) => {
                         const roleLabels = {
                           admin: "Admin",
@@ -413,9 +451,17 @@ export default function UserModal({
                   name="region"
                   control={control}
                   render={({ field }) => {
-                    const selectedRegion = regions?.find(
-                      (r) => r.id === field.value
-                    );
+                    const selectedRegion = regions?.find((r) => r.id === field.value);
+                    // If editing and the current region is not in the list, add it
+                    const regionOptions = regions ? [...regions] : [];
+                    if (editingUser && field.value && !regionOptions.some(r => r.id === field.value)) {
+                      regionOptions.unshift({
+                        id: field.value,
+                        name: (selectedRegion && typeof selectedRegion.name === 'string')
+                          ? selectedRegion.name
+                          : (typeof field.value === 'string' ? field.value : String(field.value))
+                      });
+                    }
                     return (
                       <Select
                         onValueChange={field.onChange}
@@ -424,14 +470,14 @@ export default function UserModal({
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select region">
-                            {selectedRegion?.name || ""}
+                            {selectedRegion && typeof selectedRegion.name === 'string' ? selectedRegion.name : (typeof field.value === 'string' ? field.value : "")}
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent className="max-h-60 overflow-y-auto">
-                          {regions && regions.length > 0 ? (
-                            regions.map((region) => (
+                          {regionOptions && regionOptions.length > 0 ? (
+                            regionOptions.map((region) => (
                               <SelectItem key={region.id} value={region.id}>
-                                {region?.name || ""}
+                                {typeof region.name === 'string' ? region.name : (typeof region.id === 'string' ? region.id : "")}
                               </SelectItem>
                             ))
                           ) : (
@@ -458,9 +504,17 @@ export default function UserModal({
                     name="district"
                     control={control}
                     render={({ field }) => {
-                      const selectedDistrict = districts?.find(
-                        (d) => d.id === field.value
-                      );
+                      const selectedDistrict = districts?.find((d) => d.id === field.value);
+                      // If editing and the current district is not in the list, add it
+                      const districtOptions = districts ? [...districts] : [];
+                      if (editingUser && field.value && !districtOptions.some(d => d.id === field.value)) {
+                        districtOptions.unshift({
+                          id: field.value,
+                          name: (selectedDistrict && typeof selectedDistrict.name === 'string')
+                            ? selectedDistrict.name
+                            : (typeof field.value === 'string' ? field.value : String(field.value))
+                        });
+                      }
                       return (
                         <Select
                           onValueChange={field.onChange}
@@ -469,7 +523,7 @@ export default function UserModal({
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select district">
-                              {selectedDistrict?.name || ""}
+                              {selectedDistrict && typeof selectedDistrict.name === 'string' ? selectedDistrict.name : (typeof field.value === 'string' ? field.value : "")}
                             </SelectValue>
                           </SelectTrigger>
                           <SelectContent className="max-h-60 overflow-y-auto">
@@ -477,13 +531,13 @@ export default function UserModal({
                               <SelectItem value="loading" disabled>
                                 Loading districts...
                               </SelectItem>
-                            ) : districts && districts.length > 0 ? (
-                              districts.map((district) => (
+                            ) : districtOptions && districtOptions.length > 0 ? (
+                              districtOptions.map((district) => (
                                 <SelectItem
                                   key={district.id}
                                   value={district.id}
                                 >
-                                  {district?.name}
+                                  {typeof district.name === 'string' ? district.name : (typeof district.id === 'string' ? district.id : "")}
                                 </SelectItem>
                               ))
                             ) : selectedRegion ? (
