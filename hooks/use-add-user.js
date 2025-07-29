@@ -18,7 +18,7 @@ const updateUserData = async ({ id, userData }) => {
   console.log("updateUserData", id, userData);
   
   try {
-    const response = await axios.patch(`${BASE_URL}/users/${id}`, userData);
+    const response = await axios.put(`${BASE_URL}/users/${id}`, userData);
     return response.data;
   } catch (error) {
     const errorMessage = error.response?.data?.error || error.message || 'Failed to update user';
