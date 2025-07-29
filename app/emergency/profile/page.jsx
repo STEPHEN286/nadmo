@@ -238,7 +238,7 @@ export default function ProfilePage() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <CardTitle className="text-lg">{profile?.full_name || "Reporter"}</CardTitle>
+                    <CardTitle className="text-lg">{profile?.full_name || ""}</CardTitle>
                     <CardDescription>Emergency Reporter</CardDescription>
                   </div>
                 </div>
