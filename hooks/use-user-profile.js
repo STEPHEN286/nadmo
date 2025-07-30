@@ -4,11 +4,13 @@ import axios from "axios";
 import { BASE_URL } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
-const PROFILE_ENDPOINT = `${BASE_URL}/users/profile/`;
+// const PROFILE_ENDPOINT = `${BASE_URL}/users/[]/`;
 
-const fetchUserProfile = async () => {
+const fetchUserProfile = async (userId) => {
+  console.log("userId", userId);
   try {
-    const response = await axios.get(PROFILE_ENDPOINT);
+    const response = await axios.get(`${BASE_URL}/users/${userId}/`);
+    console.log("response.data", response.data);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.error || error.message);
@@ -19,14 +21,14 @@ const updateUserProfile = async ({ userId, profileData }) => {
 
   const endpoint = `${BASE_URL}/users/${userId}/`;
   try {
-    const response = await axios.patch(endpoint, profileData);
+    const response = await axios.put(endpoint, profileData);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.error || error.message);
   }
 };
 
-export function useProfile(options = {}) {
+export function useProfile(userId, options = {}) {
   const queryClient = useQueryClient();
 
   // Fetch profile
@@ -36,8 +38,9 @@ export function useProfile(options = {}) {
     error: profileError,
     refetch: refetchProfile,
   } = useQuery({
-    queryKey: ["user-profile"],
-    queryFn: fetchUserProfile,
+    queryKey: ["user-profile", userId],
+    queryFn: () => fetchUserProfile(userId),
+    enabled: !!userId,
     ...options,
   });
 

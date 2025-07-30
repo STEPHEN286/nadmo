@@ -90,12 +90,14 @@ export default function ProfilePage() {
   const router = useRouter()
   const { toast } = useToast()
   const { user, logout, mounted } = useReporterAuth()
-  const { profile, isProfileLoading, profileError, refetchProfile } = useProfile()
+  const { profile, isProfileLoading, profileError, refetchProfile } = useProfile(user?.id)
+  // console.log("profile on profile page", profile);
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({
     phone_number: "",
     region: "",
     district: "",
+  
   })
   const [viewReportId, setViewReportId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -234,11 +236,11 @@ export default function ProfilePage() {
                   <Avatar className="h-16 w-16">
                     <AvatarImage src={user.profile_image} />
                     <AvatarFallback className="bg-red-100 text-red-600 text-xl">
-                      {profile?.full_name?.charAt(0).toUpperCase() || "R"}
+                      {profile?.profile?.full_name?.charAt(0).toUpperCase() || "R"}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <CardTitle className="text-lg">{profile?.full_name || "reporter"}</CardTitle>
+                    <CardTitle className="text-lg">{profile?.profile?.full_name || "reporter"}</CardTitle>
                     <CardDescription>Emergency Reporter</CardDescription>
                   </div>
                 </div>
@@ -247,17 +249,17 @@ export default function ProfilePage() {
                 <div className="space-y-3">
                   <div className="flex items-center space-x-2 text-sm">
                     <Mail className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-600">{user.email}</span>
+                    <span className="text-gray-600">{profile?.email}</span>
                   </div>
                   <div className="flex items-center space-x-2 text-sm">
                     <Phone className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-600">{profile?.phone_number || "Not provided"}</span>
+                    <span className="text-gray-600">{profile?.profile?.phone_number || "Not provided"}</span>
                   </div>
                   <div className="flex items-center space-x-2 text-sm">
                     <MapPin className="h-4 w-4 text-gray-400" />
                     <span className="text-gray-600">
-                      {profile?.district && profile?.region 
-                        ? `${profile.district.name}, ${profile.region.name}`
+                      {profile?.profile?.district && profile?.profile?.region 
+                        ? `${profile.profile.district.name}, ${profile.profile.region.name}`
                         : "Location not set"
                       }
                     </span>

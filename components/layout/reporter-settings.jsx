@@ -8,50 +8,85 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { useRegions } from "@/hooks/use-regions";
 import { useDistricts } from "@/hooks/use-districts";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { profileSchema } from "@/lib/utils";
 
 export default function ReporterSettings() {
   const { user } = useReporterAuth();
-  const { profile, isProfileLoading, profileError, updateProfile, isUpdating } = useProfile();
+  const { profile, isProfileLoading, profileError, updateProfile, isUpdating } = useProfile(user?.id);
   const { data: regions, isPending: regionsLoading } = useRegions();
-  const [selectedRegion, setSelectedRegion] = useState(profile?.region?.id || "");
+  const [selectedRegion, setSelectedRegion] = useState(profile?.profile?.region?.id || "");
   const { data: districts, isLoading: districtsLoading } = useDistricts(selectedRegion);
-  const [editForm, setEditForm] = useState({
-    full_name: profile?.full_name || "",
-    email: profile?.email || "",
-    phone_number: profile?.phone_number || "",
-    region: profile?.region?.id || "",
-    district: profile?.district?.id || "",
-  });
-  const [isEditing, setIsEditing] = useState(false);
 
+  // Initialize React Hook Form with Zod resolver
+  const form = useForm({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      full_name: "",
+      email: "",
+      phone_number: "",
+      region: "",
+      district: "",
+    },
+  });
+
+  // Update form values when profile data loads
   useEffect(() => {
     if (profile) {
-      setEditForm({
-        full_name: profile.full_name || "",
-        email: profile.email || "",
-        phone_number: profile.phone_number || "",
-        region: profile.region?.id || "",
-        district: profile.district?.id || "",
-      });
-      setSelectedRegion(profile.region?.id || "");
+      // console.log("Setting form values from profile:", profile);
+      const formData = {
+        full_name: profile?.profile?.full_name || "",
+        email: profile?.email || "",
+        phone_number: profile?.profile?.phone_number || "",
+        region: profile?.profile?.region?.id || "",
+        district: profile?.profile?.district?.id || "",
+      };
+      // console.log("Form data to set:", formData);
+      
+      form.reset(formData);
+      setSelectedRegion(profile?.profile?.region?.id || "");
+      
+     
     }
-  }, [profile]);
+  }, [profile, form]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setEditForm((prev) => ({ ...prev, [name]: value }));
-    if (name === "region") {
-      setSelectedRegion(value);
-      setEditForm((prev) => ({ ...prev, district: "" }));
-    }
+  // Handle region change to reset district
+  const handleRegionChange = (value) => {
+    form.setValue("region", value);
+    form.setValue("district", "");
+    setSelectedRegion(value);
   };
 
-  const handleSave = (e) => {
-    e.preventDefault();
+  // Handle form submission
+  const onSubmit = (data) => {
+    const profileData = {
+      email: data.email,
+      profile: {
+        full_name: data.full_name,
+        phone_number: data.phone_number,
+        region_id: data.region,
+        district_id: data.district,
+      }
+    };
     if (user?.id) {
-      updateProfile({ userId: user.id, profileData: editForm });
+      updateProfile({ userId: user.id, profileData });
     }
-    setIsEditing(false);
   };
 
   if (isProfileLoading) {
@@ -73,79 +108,131 @@ export default function ReporterSettings() {
         <CardDescription>Update your contact information and preferences</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="full_name">Full Name</Label>
-            <Input
-              id="full_name"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
               name="full_name"
-              value={editForm.full_name}
-              onChange={handleChange}
-              placeholder="Enter your full name"
-              disabled={isUpdating}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter your full name"
+                      disabled={isUpdating}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
+
+            <FormField
+              control={form.control}
               name="email"
-              value={editForm.email}
-             
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter your email"
+                      disabled={isUpdating}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone_number">Phone Number</Label>
-            <Input
-              id="phone_number"
+
+            <FormField
+              control={form.control}
               name="phone_number"
-              value={editForm.phone_number}
-              onChange={handleChange}
-              placeholder="Enter your phone number"
-              disabled={isUpdating}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter your phone number"
+                      disabled={isUpdating}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="region">Region</Label>
-            <select
-              id="region"
+
+            <FormField
+              control={form.control}
               name="region"
-              value={editForm.region}
-              onChange={handleChange}
-              className="mt-1 w-full border rounded px-2 py-2"
-              disabled={regionsLoading || isUpdating}
-            >
-              <option value="">Select region</option>
-              {regions && regions.length > 0 && regions.map((region) => (
-                <option key={region.id} value={region.id}>{region.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="district">District</Label>
-            <select
-              id="district"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Region</FormLabel>
+                  <Select
+                    key={`region-${field.value}`}
+                    disabled={regionsLoading || isUpdating}
+                    onValueChange={handleRegionChange}
+                    // defaultValue={field.value}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select region" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {regions && regions.length > 0 && regions.map((region) => (
+                        <SelectItem key={region.id} value={region.id}>
+                          {region.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="district"
-              value={editForm.district}
-              onChange={handleChange}
-              className="mt-1 w-full border rounded px-2 py-2"
-              disabled={districtsLoading || !editForm.region || isUpdating}
-            >
-              <option value="">Select district</option>
-              {districts && districts.length > 0 && districts.map((district) => (
-                <option key={district.id} value={district.id}>{district.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex space-x-2">
-            <Button type="submit" disabled={isUpdating} className="flex-1">
-              {isUpdating ? "Saving..." : "Save Changes"}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
-              Cancel
-            </Button>
-          </div>
-        </form>
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>District</FormLabel>
+                  <Select
+                    key={`district-${field.value}`}
+                    disabled={districtsLoading || !selectedRegion || isUpdating}
+                    onValueChange={field.onChange}
+                    // defaultValue={field.value}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select district" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {districts && districts.length > 0 && districts.map((district) => (
+                        <SelectItem key={district.id} value={district.id}>
+                          {district.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex space-x-2">
+              <Button type="submit" disabled={isUpdating} className="flex-1">
+                {isUpdating ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </Form>
         <Separator />
       </CardContent>
     </Card>
